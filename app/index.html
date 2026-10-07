@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VoltLab — Motor Control Simulator</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+</head>
+<body>
+  <header id="toolbar">
+    <div class="brand"><span class="bolt">⚡</span> <b>VoltLab</b><span class="sub">motor control simulator</span></div>
+
+    <select id="circuit-select" title="Circuit library"></select>
+
+    <div class="seg">
+      <button id="btn-run" class="accent" title="Run / pause realtime simulation">▶ Run</button>
+      <button id="btn-step" title="Advance one 0.1 s tick">⏭</button>
+    </div>
+
+    <div class="seg">
+      <input id="advance-sec" type="number" value="5" min="0.1" step="0.5" title="Sim-seconds to fast-forward">
+      <button id="btn-advance" title="Fast-forward simulation">⏩</button>
+    </div>
+
+    <div class="seg" title="Canvas zoom (Ctrl+wheel also works)">
+      <button id="btn-zoom-out">−</button>
+      <input id="zoom-slider" type="range" min="25" max="300" value="100" style="width:90px">
+      <button id="btn-zoom-in">+</button>
+      <button id="btn-zoom-fit" title="Fit circuit in view">Fit</button>
+    </div>
+
+    <details class="menu" id="menu-faults">
+      <summary>Faults</summary>
+      <div class="menu-pop">
+        <button data-fault="phase_loss" data-phase="L1">Drop phase L1</button>
+        <button data-fault="phase_loss" data-phase="L2">Drop phase L2</button>
+        <button data-fault="phase_loss" data-phase="L3">Drop phase L3</button>
+        <hr>
+        <button data-fault="overload">Mechanical overload</button>
+        <button data-fault="stall">Stall rotor</button>
+        <button data-fault="short_circuit">Short circuit</button>
+        <hr>
+        <button id="btn-clearfaults">Clear all faults</button>
+        <button id="btn-fuses">Replace blown fuses</button>
+        <button id="btn-kk-reset">Reset overload</button>
+      </div>
+    </details>
+
+    <details class="menu" id="menu-circuit">
+      <summary>Circuit</summary>
+      <div class="menu-pop">
+        <button id="btn-load">Load selected circuit</button>
+        <button id="btn-save">Save canvas as…</button>
+        <button id="btn-reset">Reset simulation</button>
+        <button id="btn-clear">Clear canvas</button>
+        <hr>
+        <button id="btn-legend">Show symbol legend</button>
+        <button id="btn-tutorial-menu">🎓 Tutorial</button>
+        <button id="btn-video">Record demo video (webm)</button>
+        <button id="btn-pdf">Export PDF report</button>
+        <button id="btn-screenshot">Capture screenshot</button>
+      </div>
+    </details>
+
+    <span class="spacer"></span>
+    <button id="btn-tutorial" title="Interactive tutorial">🎓</button>
+    <details class="menu" id="menu-mcp">
+      <summary>MCP <span id="mcp-dot" class="mcp-dot idle"></span></summary>
+      <div class="menu-pop mcp-pop">
+        <div class="mcp-row"><span class="k">App API</span><span id="mcp-api" class="v on">online</span></div>
+        <div class="mcp-row"><span class="k">Agent</span><span id="mcp-agent" class="v">never connected</span></div>
+        <pre id="mcp-config"></pre>
+        <button id="mcp-copy">Copy MCP config</button>
+        <p class="mcp-hint">Register this JSON with your MCP client, or run
+        <code>node mcp/server.mjs</code>. Tools then drive this simulator:
+        build circuits, press buttons, inject faults, read state.</p>
+      </div>
+    </details>
+    <button id="btn-theme" title="Toggle light / dark theme">☀️</button>
+  </header>
+
+  <main id="workspace">
+    <aside id="palette">
+      <div id="palette-groups"></div>
+      <p class="hint">Click a component, then the canvas, to place it.<br>
+      Click two terminals to wire them.<br>
+      Drag to move · Del removes selected.</p>
+    </aside>
+
+    <section id="canvas-wrap">
+      <div id="canvas-scale"><svg id="canvas" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="2.6" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <circle cx="10" cy="10" r="0.7" class="grid-dot"/>
+          </pattern>
+        </defs>
+        <rect id="grid-rect" x="0" y="0" width="100%" height="100%" fill="url(#grid)"/>
+        <g id="wires-layer"></g>
+        <g id="dots-layer"></g>
+        <g id="comps-layer"></g>
+        <g id="ghost-layer"></g>
+      </svg></div>
+      <div id="toast" class="hidden"></div>
+    </section>
+
+    <aside id="inspector">
+      <h2>Inspector</h2>
+      <div id="inspector-body" class="empty">Nothing selected.<br>Click a component on the canvas.</div>
+    </aside>
+  </main>
+
+  <footer id="bottom">
+    <details id="log-drawer">
+      <summary><span class="log-label">Log</span><span id="log-ticker"></span><span class="chev">▸</span></summary>
+      <div id="eventlog" aria-live="polite"></div>
+    </details>
+    <div id="statusbar">
+      <span id="st-conn" class="dot off"></span>
+      <span id="st-circuit">—</span>
+      <span id="st-time">t = 0.0 s</span>
+      <span id="st-run">paused</span>
+      <span id="st-faults"></span>
+      <span class="spacer"></span>
+      <span id="st-api" title="Agents: use the MCP server in mcp/server.mjs against this URL">MCP: mcp/server.mjs</span>
+    </div>
+  </footer>
+
+  <dialog id="legend-dialog">
+    <div class="legend-head">
+      <h2>Symbol Legend</h2>
+      <button id="legend-close" title="Close">✕</button>
+    </div>
+    <div id="legend-grid"></div>
+  </dialog>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

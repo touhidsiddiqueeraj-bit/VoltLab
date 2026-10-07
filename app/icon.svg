@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1d2938"/>
+      <stop offset="1" stop-color="#0c1016"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#ffd9a0"/>
+      <stop offset="0.55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e08b2d"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- panel body -->
+  <rect x="16" y="16" width="480" height="480" rx="104" fill="url(#bg)"/>
+  <rect x="16" y="16" width="480" height="480" rx="104" fill="none" stroke="#3d5271" stroke-width="6"/>
+
+  <!-- three incoming phases -->
+  <g stroke-width="18" stroke-linecap="round" opacity="0.9">
+    <line x1="148" y1="72" x2="148" y2="150" stroke="#c98a3d"/>
+    <line x1="256" y1="60" x2="256" y2="138" stroke="#8f8f98"/>
+    <line x1="364" y1="72" x2="364" y2="150" stroke="#b06a72"/>
+  </g>
+  <g fill="#101720" stroke-width="6">
+    <circle cx="148" cy="150" r="16" stroke="#c98a3d"/>
+    <circle cx="256" cy="138" r="16" stroke="#8f8f98"/>
+    <circle cx="364" cy="150" r="16" stroke="#b06a72"/>
+  </g>
+
+  <!-- the bolt, switching the phases down to the motor -->
+  <path d="M 302 148
+           L 186 300
+           L 252 300
+           L 218 424
+           L 350 246
+           L 278 246
+           L 330 148
+           Z"
+        fill="url(#bolt)" stroke="#a8611a" stroke-width="5" stroke-linejoin="round" filter="url(#glow)"/>
+
+  <!-- neutral return -->
+  <line x1="128" y1="416" x2="384" y2="416" stroke="#4f83b8" stroke-width="16" stroke-linecap="round" opacity="0.85"/>
+</svg>

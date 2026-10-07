@@ -1,0 +1,43 @@
+{
+  "name": "voltlab",
+  "version": "1.0.0",
+  "description": "VoltLab — motor control circuit simulator: web app + Electron shell + MCP agent layer",
+  "type": "module",
+  "main": "electron/main.mjs",
+  "license": "MIT",
+  "author": "Touhid Siddiquee Raj <touhidsiddiqueeraj@gmail.com>",
+  "homepage": "https://github.com/touhidsiddiqueeraj-bit/voltlab#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/touhidsiddiqueeraj-bit/voltlab.git"
+  },
+  "bugs": "https://github.com/touhidsiddiqueeraj-bit/voltlab/issues",
+  "keywords": [
+    "simulator",
+    "motor-control",
+    "electrical",
+    "iec-61082",
+    "ladder-logic",
+    "contactor",
+    "plc",
+    "electron",
+    "mcp",
+    "model-context-protocol",
+    "agent"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "electron .",
+    "serve": "node server.js",
+    "test": "node --test",
+    "test:engine": "node --test test/dol.test.mjs",
+    "test:mcp": "node test/mcp.e2e.mjs",
+    "package": "electron-packager . VoltLab --platform=linux --arch=x64 --out=dist --overwrite --icon=build/icon.png --app-bundle-id=io.voltlab.simulator --ignore=\"^/(dist|out|build|test|\\.video_agent)\" --ignore=\"\\.(msi|msi|Exe|exe|Ini)$\" --ignore=\"^/(EKTS_Setup|InstMsiA|InstMsiW|Setup)\""
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-packager": "^17.1.2"
+  }
+}
