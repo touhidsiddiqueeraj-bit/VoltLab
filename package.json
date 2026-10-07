@@ -6,12 +6,12 @@
   "main": "electron/main.mjs",
   "license": "MIT",
   "author": "Touhid Siddiquee Raj <touhidsiddiqueeraj@gmail.com>",
-  "homepage": "https://github.com/touhidsiddiqueeraj-bit/voltlab#readme",
+  "homepage": "https://github.com/touhidsiddiqueeraj-bit/VoltLab#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/touhidsiddiqueeraj-bit/voltlab.git"
+    "url": "git+https://github.com/touhidsiddiqueeraj-bit/VoltLab.git"
   },
-  "bugs": "https://github.com/touhidsiddiqueeraj-bit/voltlab/issues",
+  "bugs": "https://github.com/touhidsiddiqueeraj-bit/VoltLab/issues",
   "keywords": [
     "simulator",
     "motor-control",

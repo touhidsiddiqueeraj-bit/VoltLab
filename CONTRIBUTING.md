@@ -7,7 +7,7 @@ are especially welcome.
 ## Development setup
 
 ```bash
-git clone https://github.com/touhidsiddiqueeraj-bit/voltlab.git
+git clone https://github.com/touhidsiddiqueeraj-bit/VoltLab.git
 cd voltlab
 npm install          # only dev deps: electron + electron-packager
 npm test             # engine + examples + MCP end-to-end

@@ -1,6 +1,6 @@
 # ⚡ VoltLab — Motor Control Circuit Simulator
 
-[![CI](https://github.com/touhidsiddiqueeraj-bit/voltlab/actions/workflows/ci.yml/badge.svg)](https://github.com/touhidsiddiqueeraj-bit/voltlab/actions/workflows/ci.yml)
+[![CI](https://github.com/touhidsiddiqueeraj-bit/VoltLab/actions/workflows/ci.yml/badge.svg)](https://github.com/touhidsiddiqueeraj-bit/VoltLab/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A518-brightgreen)](package.json)
 [![Electron](https://img.shields.io/badge/electron-33-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
@@ -17,7 +17,7 @@ wire, break, fault, document and film circuits entirely through tool calls.
 
 ![VoltLab running the DOL starter demo](docs/media/dol-starter-dark.png)
 
-https://github.com/touhidsiddiqueeraj-bit/voltlab/raw/main/docs/media/dol-starter-demo.mp4
+https://github.com/touhidsiddiqueeraj-bit/VoltLab/raw/main/docs/media/dol-starter-demo.mp4
 
 > *The app scripting its own demo video: press START → seal-in holds → STOP → coast-down.*
 > *(Click the link above to play — GitHub doesn't inline-play repo videos.)*
@@ -47,11 +47,11 @@ https://github.com/touhidsiddiqueeraj-bit/voltlab/raw/main/docs/media/dol-starte
 **⚡ Live demo, zero install:** the `docs/` folder doubles as a
 [GitHub Pages](https://pages.github.com/) site with the **real simulator running in your
 browser** — enable *Settings → Pages → Deploy from branch → `main` → `/docs`* and open
-`https://<user>.github.io/voltlab/`. The demo page embeds the actual `sim/engine.js`
+`https://<user>.github.io/VoltLab/`. The demo page embeds the actual `sim/engine.js`
 (client-side; no backend needed for the interactive tour).
 
 ```bash
-git clone https://github.com/touhidsiddiqueeraj-bit/voltlab.git
+git clone https://github.com/touhidsiddiqueeraj-bit/VoltLab.git
 cd voltlab
 
 npm install            # once — installs Electron only
@@ -103,7 +103,7 @@ contactors and the 3-deck floor cam.*
 
 | Doc | Contents |
 |---|---|
-| [Live demo](https://touhidsiddiqueeraj-bit.github.io/voltlab/) | The real engine running on GitHub Pages — no install |
+| [Live demo](https://touhidsiddiqueeraj-bit.github.io/VoltLab/) | The real engine running on GitHub Pages — no install |
 | [docs/architecture.md](docs/architecture.md) | How the engine, host, UI and MCP layer fit together; the solver model; design constraints |
 | [docs/mcp.md](docs/mcp.md) | Complete 26-tool MCP reference + raw HTTP equivalents + worked agent session |
 | [docs/circuit-format.md](docs/circuit-format.md) | The circuit JSON schema — components, wires, waypoints, demo scripts |
