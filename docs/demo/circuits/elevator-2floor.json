@@ -1,0 +1,769 @@
+{
+ "name": "elevator-2floor",
+ "description": "Two-floor elevator control: call up (S1) / call down (S2) latch their contactors (KM1 up, KM2 down) with seal-in aux contacts; top/bottom limit switches (S3/S4) stop the car at the ends; NC aux cross-interlock (KM1 21-22 in the down path, KM2 21-22 in the up path) prevents both contactors ever energizing together; thermal overload KK1 protects the hoist motor. Simulate arrival by pressing the limit switch.",
+ "components": [
+  {
+   "id": "X1",
+   "type": "supply3",
+   "label": "X1",
+   "x": 40,
+   "y": 40
+  },
+  {
+   "id": "Q1",
+   "type": "breaker3",
+   "label": "Q1",
+   "x": 180,
+   "y": 160,
+   "state": {
+    "closed": true
+   }
+  },
+  {
+   "id": "F1",
+   "type": "fuse3",
+   "label": "F1",
+   "x": 320,
+   "y": 320
+  },
+  {
+   "id": "F4",
+   "type": "fuse1",
+   "label": "F4",
+   "x": 700,
+   "y": 320
+  },
+  {
+   "id": "KM1",
+   "type": "contactor",
+   "label": "KM1 Up",
+   "x": 460,
+   "y": 460
+  },
+  {
+   "id": "KM2",
+   "type": "contactor",
+   "label": "KM2 Down",
+   "x": 460,
+   "y": 760
+  },
+  {
+   "id": "KK1",
+   "type": "overload",
+   "label": "KK1",
+   "x": 760,
+   "y": 600,
+   "params": {
+    "flc": 12,
+    "trip_class": 10
+   }
+  },
+  {
+   "id": "M1",
+   "type": "motor3",
+   "label": "M1 Hoist",
+   "x": 600,
+   "y": 1100,
+   "params": {
+    "flc": 12,
+    "load": 0.9
+   }
+  },
+  {
+   "id": "S1",
+   "type": "pushbutton_no",
+   "label": "S1 Call up",
+   "x": 1140,
+   "y": 440
+  },
+  {
+   "id": "S3",
+   "type": "pushbutton_nc",
+   "label": "S3 Top limit",
+   "x": 1140,
+   "y": 560
+  },
+  {
+   "id": "S2",
+   "type": "pushbutton_no",
+   "label": "S2 Call down",
+   "x": 1330,
+   "y": 440
+  },
+  {
+   "id": "S4",
+   "type": "pushbutton_nc",
+   "label": "S4 Bottom limit",
+   "x": 1330,
+   "y": 560
+  },
+  {
+   "id": "H1",
+   "type": "lamp",
+   "label": "H1 Going up",
+   "x": 1080,
+   "y": 760,
+   "params": {
+    "color": "#38c172"
+   }
+  },
+  {
+   "id": "H3",
+   "type": "lamp",
+   "label": "H3 Power",
+   "x": 1230,
+   "y": 760,
+   "params": {
+    "color": "#f5d76e"
+   }
+  },
+  {
+   "id": "H2",
+   "type": "lamp",
+   "label": "H2 Going down",
+   "x": 1380,
+   "y": 760,
+   "params": {
+    "color": "#4fc3f7"
+   }
+  },
+  {
+   "id": "N1",
+   "type": "junction",
+   "label": "N",
+   "x": 1230,
+   "y": 1150
+  }
+ ],
+ "wires": [
+  {
+   "from": "X1.L1",
+   "to": "Q1.L1"
+  },
+  {
+   "from": "X1.L2",
+   "to": "Q1.L2"
+  },
+  {
+   "from": "X1.L3",
+   "to": "Q1.L3"
+  },
+  {
+   "from": "Q1.T1",
+   "to": "F1.L1"
+  },
+  {
+   "from": "Q1.T2",
+   "to": "F1.L2"
+  },
+  {
+   "from": "Q1.T3",
+   "to": "F1.L3"
+  },
+  {
+   "from": "F1.T1",
+   "to": "KM1.L1"
+  },
+  {
+   "from": "F1.T2",
+   "to": "KM1.L2"
+  },
+  {
+   "from": "F1.T3",
+   "to": "KM1.L3"
+  },
+  {
+   "from": "F1.T1",
+   "to": "KM2.L1",
+   "waypoints": [
+    [
+     340,
+     445
+    ],
+    [
+     300,
+     445
+    ],
+    [
+     300,
+     760
+    ]
+   ]
+  },
+  {
+   "from": "F1.T2",
+   "to": "KM2.L2",
+   "waypoints": [
+    [
+     370,
+     445
+    ],
+    [
+     290,
+     445
+    ],
+    [
+     290,
+     760
+    ]
+   ]
+  },
+  {
+   "from": "F1.T3",
+   "to": "KM2.L3",
+   "waypoints": [
+    [
+     400,
+     445
+    ],
+    [
+     280,
+     445
+    ],
+    [
+     280,
+     760
+    ]
+   ]
+  },
+  {
+   "from": "KM1.T1",
+   "to": "KK1.L1",
+   "waypoints": [
+    [
+     500,
+     645
+    ],
+    [
+     780,
+     645
+    ]
+   ]
+  },
+  {
+   "from": "KM1.T2",
+   "to": "KK1.L2",
+   "waypoints": [
+    [
+     530,
+     655
+    ],
+    [
+     810,
+     655
+    ]
+   ]
+  },
+  {
+   "from": "KM1.T3",
+   "to": "KK1.L3",
+   "waypoints": [
+    [
+     560,
+     665
+    ],
+    [
+     840,
+     665
+    ]
+   ]
+  },
+  {
+   "from": "KM2.T1",
+   "to": "KK1.L1",
+   "waypoints": [
+    [
+     650,
+     860
+    ],
+    [
+     650,
+     645
+    ]
+   ]
+  },
+  {
+   "from": "KM2.T2",
+   "to": "KK1.L2",
+   "waypoints": [
+    [
+     660,
+     860
+    ],
+    [
+     660,
+     655
+    ]
+   ]
+  },
+  {
+   "from": "KM2.T3",
+   "to": "KK1.L3",
+   "waypoints": [
+    [
+     670,
+     860
+    ],
+    [
+     670,
+     665
+    ]
+   ]
+  },
+  {
+   "from": "KK1.T1",
+   "to": "M1.U",
+   "waypoints": [
+    [
+     780,
+     1000
+    ],
+    [
+     620,
+     1000
+    ]
+   ]
+  },
+  {
+   "from": "KK1.T2",
+   "to": "M1.V",
+   "waypoints": [
+    [
+     810,
+     1010
+    ],
+    [
+     650,
+     1010
+    ]
+   ]
+  },
+  {
+   "from": "KK1.T3",
+   "to": "M1.W",
+   "waypoints": [
+    [
+     840,
+     1020
+    ],
+    [
+     680,
+     1020
+    ]
+   ]
+  },
+  {
+   "from": "F1.T1",
+   "to": "F4.L",
+   "waypoints": [
+    [
+     340,
+     455
+    ],
+    [
+     770,
+     455
+    ],
+    [
+     770,
+     290
+    ],
+    [
+     720,
+     290
+    ]
+   ]
+  },
+  {
+   "from": "F4.T",
+   "to": "KK1.96",
+   "waypoints": [
+    [
+     720,
+     450
+    ],
+    [
+     960,
+     450
+    ],
+    [
+     960,
+     620
+    ]
+   ]
+  },
+  {
+   "from": "KK1.95",
+   "to": "KM2.21",
+   "waypoints": [
+    [
+     885,
+     560
+    ],
+    [
+     555,
+     560
+    ],
+    [
+     555,
+     810
+    ]
+   ]
+  },
+  {
+   "from": "KM2.22",
+   "to": "S1.13",
+   "waypoints": [
+    [
+     700,
+     810
+    ],
+    [
+     700,
+     415
+    ]
+   ]
+  },
+  {
+   "from": "S1.14",
+   "to": "S3.11"
+  },
+  {
+   "from": "S3.12",
+   "to": "KM1.A1",
+   "waypoints": [
+    [
+     1100,
+     640
+    ],
+    [
+     1100,
+     545
+    ],
+    [
+     595,
+     545
+    ]
+   ]
+  },
+  {
+   "from": "KM2.22",
+   "to": "KM1.13",
+   "waypoints": [
+    [
+     640,
+     810
+    ],
+    [
+     640,
+     490
+    ],
+    [
+     555,
+     490
+    ]
+   ]
+  },
+  {
+   "from": "KM1.14",
+   "to": "S1.14",
+   "waypoints": [
+    [
+     620,
+     430
+    ],
+    [
+     1140,
+     430
+    ],
+    [
+     1140,
+     520
+    ]
+   ]
+  },
+  {
+   "from": "KK1.95",
+   "to": "KM1.21",
+   "waypoints": [
+    [
+     885,
+     530
+    ],
+    [
+     565,
+     530
+    ]
+   ]
+  },
+  {
+   "from": "KM1.22",
+   "to": "S2.13",
+   "waypoints": [
+    [
+     645,
+     510
+    ],
+    [
+     645,
+     240
+    ],
+    [
+     1270,
+     240
+    ]
+   ]
+  },
+  {
+   "from": "KM1.22",
+   "to": "KM2.13",
+   "waypoints": [
+    [
+     645,
+     510
+    ],
+    [
+     645,
+     745
+    ],
+    [
+     570,
+     745
+    ]
+   ]
+  },
+  {
+   "from": "S2.14",
+   "to": "S4.11"
+  },
+  {
+   "from": "S4.12",
+   "to": "KM2.A1",
+   "waypoints": [
+    [
+     1320,
+     640
+    ],
+    [
+     1320,
+     855
+    ],
+    [
+     595,
+     855
+    ]
+   ]
+  },
+  {
+   "from": "KM2.14",
+   "to": "S2.14",
+   "waypoints": [
+    [
+     620,
+     715
+    ],
+    [
+     1345,
+     715
+    ],
+    [
+     1345,
+     410
+    ],
+    [
+     1270,
+     410
+    ]
+   ]
+  },
+  {
+   "from": "KM1.A1",
+   "to": "H1.1",
+   "waypoints": [
+    [
+     1105,
+     570
+    ]
+   ]
+  },
+  {
+   "from": "KM2.A1",
+   "to": "H2.1",
+   "waypoints": [
+    [
+     595,
+     800
+    ],
+    [
+     1390,
+     800
+    ],
+    [
+     1390,
+     770
+    ],
+    [
+     1405,
+     770
+    ]
+   ]
+  },
+  {
+   "from": "KK1.95",
+   "to": "H3.1",
+   "waypoints": [
+    [
+     885,
+     560
+    ],
+    [
+     1230,
+     560
+    ],
+    [
+     1230,
+     745
+    ],
+    [
+     1255,
+     745
+    ]
+   ]
+  },
+  {
+   "from": "KM1.A2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     595,
+     680
+    ],
+    [
+     710,
+     680
+    ],
+    [
+     710,
+     1070
+    ],
+    [
+     1250,
+     1070
+    ]
+   ]
+  },
+  {
+   "from": "KM2.A2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     595,
+     975
+    ],
+    [
+     690,
+     975
+    ],
+    [
+     690,
+     1050
+    ],
+    [
+     1250,
+     1050
+    ]
+   ]
+  },
+  {
+   "from": "H1.2",
+   "to": "N1.T"
+  },
+  {
+   "from": "H2.2",
+   "to": "N1.T"
+  },
+  {
+   "from": "H3.2",
+   "to": "N1.T"
+  },
+  {
+   "from": "X1.N",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     150,
+     1200
+    ],
+    [
+     1240,
+     1200
+    ]
+   ]
+  }
+ ],
+ "demo": [
+  {
+   "caption": "VoltLab \u2014 two-floor elevator: call up"
+  },
+  {
+   "wait": 2
+  },
+  {
+   "press": "S1"
+  },
+  {
+   "wait": 1.5
+  },
+  {
+   "release": "S1"
+  },
+  {
+   "wait": 3
+  },
+  {
+   "caption": "Car arrives at the top \u2014 limit switch S3 stops it"
+  },
+  {
+   "press": "S3"
+  },
+  {
+   "wait": 1.2
+  },
+  {
+   "release": "S3"
+  },
+  {
+   "wait": 2
+  },
+  {
+   "caption": "Call down \u2014 cross-interlock in action"
+  },
+  {
+   "press": "S2"
+  },
+  {
+   "wait": 1.5
+  },
+  {
+   "release": "S2"
+  },
+  {
+   "wait": 3
+  },
+  {
+   "caption": "Bottom limit serves the call"
+  },
+  {
+   "press": "S4"
+  },
+  {
+   "wait": 1.2
+  },
+  {
+   "release": "S4"
+  },
+  {
+   "wait": 2.5
+  }
+ ]
+}

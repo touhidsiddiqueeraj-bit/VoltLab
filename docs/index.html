@@ -1,0 +1,274 @@
+<!doctype html>
+<!-- VoltLab landing page for GitHub Pages.
+     Serve the docs/ folder: Settings → Pages → Deploy from branch → main → /docs -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VoltLab — Motor Control Circuit Simulator</title>
+  <meta name="description" content="A minimal, cross-platform motor-control circuit simulator with a real physics engine, IEC-style schematics, PDF drawing sets and a full MCP agent layer. Try it live in your browser.">
+  <link rel="icon" href="demo/icon.svg">
+  <style>
+    :root {
+      --bg: #0d1117; --panel: #141b24; --panel2: #182130; --line: #232e3d;
+      --text: #c9d4e3; --dim: #7d8b9e; --accent: #ffb454; --accent2: #4fc3f7;
+      --ok: #38c172; --bad: #e3342f; --mono: "Consolas", "JetBrains Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 15px/1.65 "Segoe UI", system-ui, sans-serif;
+    }
+    a { color: var(--accent2); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { max-width: 1060px; margin: 0 auto; padding: 0 22px; }
+    code, pre { font-family: var(--mono); }
+    h2 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.3px; }
+    .kicker { font: 700 11px var(--mono); letter-spacing: 2.2px; text-transform: uppercase; color: var(--accent2); }
+    .lead { color: var(--dim); font-size: 17px; max-width: 760px; }
+
+    nav {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(13,17,23,0.85); backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line);
+    }
+    nav .wrap { display: flex; align-items: center; gap: 18px; height: 54px; }
+    .logo { font-weight: 700; font-size: 17px; color: var(--accent); }
+    nav .spacer { flex: 1; }
+    nav a { font-size: 14px; }
+    nav .gh { border: 1px solid var(--line); padding: 5px 12px; border-radius: 7px; }
+    nav .gh:hover { border-color: var(--accent2); text-decoration: none; }
+
+    header.hero { padding: 64px 0 30px; text-align: center; }
+    .hero h1 { font-size: 44px; margin: 10px 0 14px; letter-spacing: -1px; }
+    .hero h1 em { font-style: normal; color: var(--accent); }
+    .hero .lead { margin: 0 auto 26px; }
+    .badges { display: flex; gap: 8px; justify-content: center; margin-bottom: 26px; flex-wrap: wrap; }
+    .badges img { border-radius: 4px; }
+    .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-block; padding: 10px 22px; border-radius: 9px;
+      font-weight: 600; font-size: 15px; border: 1px solid var(--line);
+    }
+    .btn:hover { text-decoration: none; }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #0d1117; }
+    .btn.primary:hover { filter: brightness(1.08); }
+
+    .shot {
+      margin: 34px 0 0; border: 1px solid var(--line); border-radius: 14px;
+      overflow: hidden; box-shadow: 0 24px 70px rgba(0,0,0,0.45);
+    }
+    .shot img, .shot video { display: block; width: 100%; }
+
+    section { padding: 46px 0; }
+    section + section { border-top: 1px solid var(--line); }
+
+    .demo-frame {
+      border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.45); background: var(--panel);
+    }
+    .demo-frame iframe { display: block; width: 100%; height: 620px; border: 0; background: var(--bg); }
+    .demo-note { color: var(--dim); font-size: 13.5px; margin-top: 12px; }
+    .demo-note b { color: var(--accent); }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 28px; }
+    .card {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+      padding: 18px 20px;
+    }
+    .card h3 { margin: 0 0 8px; font-size: 16px; color: var(--text); }
+    .card p { margin: 0; color: var(--dim); font-size: 14px; }
+    .card .ico { font-size: 22px; margin-right: 8px; }
+
+    .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; margin-top: 28px; }
+    figure { margin: 0; }
+    figure img, figure video { width: 100%; border: 1px solid var(--line); border-radius: 12px; display: block; }
+    figcaption { color: var(--dim); font-size: 13.5px; margin-top: 8px; }
+
+    table.circuits { width: 100%; border-collapse: collapse; margin-top: 26px; font-size: 14.5px; }
+    .circuits th { text-align: left; font: 700 11px var(--mono); letter-spacing: 1.4px; text-transform: uppercase; color: var(--dim); padding: 8px 10px; border-bottom: 1px solid var(--line); }
+    .circuits td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .circuits code { color: var(--accent2); font-size: 13px; }
+
+    pre.quickstart {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+      padding: 18px 22px; overflow-x: auto; font-size: 14px; line-height: 1.7;
+    }
+    pre .c-comment { color: var(--dim); }
+
+    footer { border-top: 1px solid var(--line); padding: 26px 0 40px; color: var(--dim); font-size: 13.5px; }
+    footer .wrap { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+    footer .spacer { flex: 1; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="wrap">
+      <span class="logo">⚡ VoltLab</span>
+      <span class="spacer"></span>
+      <a href="#demo">Live demo</a>
+      <a href="#circuits">Circuits</a>
+      <a href="#docs">Docs</a>
+      <a class="gh" href="https://github.com/touhidsiddiqueeraj-bit/voltlab">GitHub ↗</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="wrap">
+      <span class="kicker">Motor control circuit simulator</span>
+      <h1>Wire it. Run it. <em>Break it.</em><br>Let an agent drive it.</h1>
+      <p class="lead">VoltLab simulates electromechanical motor-control circuits — DOL starters,
+        interlocks, timers, reversing starters, even a 10-story relay elevator — with a real
+        per-tick electrical solver and IEC-style schematics. And because it speaks
+        <b>MCP</b>, an LLM agent can build, wire, fault and document every circuit for you.</p>
+      <div class="badges">
+        <img alt="CI" src="https://img.shields.io/github/actions/workflow/status/touhidsiddiqueeraj-bit/voltlab/ci.yml?branch=main&label=CI">
+        <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg">
+        <img alt="Node ≥ 18" src="https://img.shields.io/badge/node-%E2%89%A518-brightgreen">
+        <img alt="MCP server" src="https://img.shields.io/badge/MCP-server-8A2BE2">
+      </div>
+      <div class="cta">
+        <a class="btn primary" href="#demo">▶ Try it live</a>
+        <a class="btn" href="https://github.com/touhidsiddiqueeraj-bit/voltlab">Source on GitHub</a>
+        <a class="btn" href="#quickstart">Get started</a>
+      </div>
+
+      <div class="shot">
+        <img src="media/dol-starter-dark.png" alt="VoltLab running the DOL starter demo in dark theme">
+      </div>
+    </div>
+  </header>
+
+  <section id="demo">
+    <div class="wrap">
+      <span class="kicker">No install, no backend</span>
+      <h2>This is the real simulator</h2>
+      <p class="lead">Not a video, not a mock-up: the page below runs the actual
+        <code>sim/engine.js</code> solver in your browser — the same code the desktop app
+        and the MCP agents drive.</p>
+
+      <div class="demo-frame">
+        <iframe src="demo/" title="VoltLab live demo" loading="lazy"></iframe>
+      </div>
+      <p class="demo-note"><b>Try:</b> hold <b>S1</b> on the schematic — the contactor picks up and the
+        motor spins (release: the seal-in keeps it running). Toggle breaker <b>Q1</b> by clicking it.
+        Pick <b>reversing-starter</b> from the dropdown and watch the interlock. When the thermal
+        overload <b>KK1</b> trips (⏩ 5s after a stall), click its red <b>RESET</b>.</p>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <span class="kicker">Why VoltLab</span>
+      <h2>A trainer bench, a drawing office and an agent playground</h2>
+      <div class="grid">
+        <div class="card"><h3><span class="ico">🔌</span>Real physics</h3>
+          <p>Per-tick union-find netlists and phase propagation: 6× FLC inrush, class-10 thermal
+          trip curves, single-phasing, coast-down, fuse blowing — not a canned animation.</p></div>
+        <div class="card"><h3><span class="ico">📐</span>IEC-style schematics</h3>
+          <p>16 device types drawn as proper IEC symbols, phase-colored live wires, terminal-level
+          wiring, zoom from 25–300 %, inspector and event log.</p></div>
+        <div class="card"><h3><span class="ico">🤖</span>MCP agent layer</h3>
+          <p>26 tools over stdio JSON-RPC (or plain HTTP): agents build, wire, fault, reset,
+          fast-forward and inspect circuits — the full test suite is an agent session.</p></div>
+        <div class="card"><h3><span class="ico">📄</span>Self-documenting exports</h3>
+          <p>Any circuit exports as an IEC 61082-1-style multi-sheet PDF drawing set (zone grids,
+          title blocks, sheet index) and a scripted 720p demo video.</p></div>
+        <div class="card"><h3><span class="ico">🎓</span>Learn as you go</h3>
+          <p>An 11-step interactive tutorial with action gates, five worked example circuits with
+          behavior tests, light and dark themes.</p></div>
+        <div class="card"><h3><span class="ico">📦</span>Zero runtime deps</h3>
+          <p>Server, simulator and MCP bridge are pure Node stdlib. Electron is the only dev
+          dependency. <code>npm run serve</code> and you're running.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="circuits">
+    <div class="wrap">
+      <span class="kicker">Examples included</span>
+      <h2>Five worked circuits, all test-covered</h2>
+      <table class="circuits">
+        <tr><th>Circuit</th><th>What it demonstrates</th></tr>
+        <tr><td><code>dol-starter</code></td><td>Direct-On-Line start/stop, seal-in holding, class-10 overload trip, trip lamp</td></tr>
+        <tr><td><code>reversing-starter</code></td><td>Forward/reverse contactors, phase-swap wiring, an interlock that makes simultaneous energizing impossible</td></tr>
+        <tr><td><code>timer-sequence</code></td><td>On-delay timer starts a second conveyor motor 3 s after the first</td></tr>
+        <tr><td><code>elevator-2floor</code></td><td>Call latching, travel limit switches, NC cross-interlock, hoist overload</td></tr>
+        <tr><td><code>elevator-10floor</code></td><td><b>Full 10-story relay elevator</b> — 3-deck floor cam, per-floor call relays, auto-dispatch with dwell: 46 components, 169 wires</td></tr>
+      </table>
+      <div class="pair">
+        <figure>
+          <img src="media/elevator-10floor.png" alt="The 10-story relay elevator circuit overview" loading="lazy">
+          <figcaption>The 10-story relay elevator — every K1–K10 call relay, contactor and cam deck is live.</figcaption>
+        </figure>
+        <figure>
+          <img src="media/overload-trip.png" alt="Tripped thermal overload close-up" loading="lazy">
+          <figcaption>After ~15 s of locked rotor the class-10 overload trips: coil dropped, trip lamp lit, red RESET waiting.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="exports">
+    <div class="wrap">
+      <span class="kicker">Documentation that writes itself</span>
+      <h2>Exports a real drawing set</h2>
+      <p class="lead">One click (or one agent tool call) turns any circuit into an
+        IEC 61082-1-style PDF drawing package — and records a narrated-by-captions demo video.</p>
+      <div class="pair">
+        <figure>
+          <img src="media/report-index.png" alt="PDF drawing set index sheet with tile map" loading="lazy">
+          <figcaption>Sheet 1: cover with full-circuit overview, numbered tile map and sheet index.</figcaption>
+        </figure>
+        <figure>
+          <img src="media/report-sheet.png" alt="PDF schematic sheet with zone grid and title block" loading="lazy">
+          <figcaption>Schematic sheets: 1:1 tiling across A4 landscape, zone grids, title blocks — the elevator spans 17 sheets.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="quickstart">
+    <div class="wrap">
+      <span class="kicker">Run the full app</span>
+      <h2>Quick start</h2>
+      <pre class="quickstart"><code>git clone https://github.com/touhidsiddiqueeraj-bit/voltlab.git
+cd voltlab
+npm install            <span class="c-comment"># once — installs Electron only</span>
+
+npm run serve          <span class="c-comment"># browser mode → http://127.0.0.1:8123</span>
+npm start              <span class="c-comment"># or the Electron desktop window</span>
+npm test               <span class="c-comment"># 31 headless tests: engine + circuits + MCP end-to-end</span></code></pre>
+      <p class="lead" style="margin-top:18px">Agents connect over MCP — point any client at
+        <code>mcp/server.mjs</code> and it gets the full 26-tool catalog
+        (<a href="https://github.com/touhidsiddiqueeraj-bit/voltlab/blob/main/docs/mcp.md">reference</a>).</p>
+    </div>
+  </section>
+
+  <section id="docs">
+    <div class="wrap">
+      <span class="kicker">Go deeper</span>
+      <h2>Documentation</h2>
+      <div class="grid">
+        <a class="card" href="https://github.com/touhidsiddiqueeraj-bit/voltlab/blob/main/docs/architecture.md"><h3>🏛 Architecture</h3><p>How the solver, host, UI and MCP layer fit together — and the sharp edges we hit building it.</p></a>
+        <a class="card" href="https://github.com/touhidsiddiqueeraj-bit/voltlab/blob/main/docs/mcp.md"><h3>🤖 MCP reference</h3><p>All 26 tools with arguments, raw-HTTP equivalents and a worked agent session.</p></a>
+        <a class="card" href="https://github.com/touhidsiddiqueeraj-bit/voltlab/blob/main/docs/circuit-format.md"><h3>🧾 Circuit format</h3><p>The JSON schema: components, wires, waypoints and demo scripts.</p></a>
+        <a class="card" href="https://github.com/touhidsiddiqueeraj-bit/voltlab/blob/main/docs/examples.md"><h3>💡 Example circuits</h3><p>A guided tour of all five examples with scenarios and exercises.</p></a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <span>⚡ VoltLab — MIT License © 2026 Touhid Siddiquee Raj</span>
+      <span class="spacer"></span>
+      <a href="https://github.com/touhidsiddiqueeraj-bit/voltlab">GitHub</a>
+      <a href="https://github.com/touhidsiddiqueeraj-bit/voltlab/issues">Issues</a>
+      <span>Inspired by the classic EKTS simulator — all code original.</span>
+    </div>
+  </footer>
+
+</body>
+</html>

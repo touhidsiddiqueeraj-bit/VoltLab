@@ -41,6 +41,10 @@ First public release.
 - **Tests**: 31 tests total — engine physics (DOL scenario), example-circuit wiring
   validation, and a full MCP end-to-end run against real server + real stdio bridge.
 - **Packaging**: `npm run package` → standalone linux-x64 Electron build.
+- **GitHub Pages site** (`docs/`): landing page plus a live demo that runs the real
+  `sim/engine.js` solver entirely client-side (vendored copies refreshed by
+  `scripts/sync_demo.sh`). Enable via *Settings → Pages → Deploy from branch → main →
+  /docs*.
 
 ### Fixed
 

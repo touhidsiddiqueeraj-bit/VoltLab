@@ -1,0 +1,812 @@
+{
+ "name": "timer-sequence",
+ "description": "Sequential motor start with an on-delay timer: START (S1) energizes KM1 immediately (motor M1 runs, H2 lit) and the KT1 timer coil; after the set delay (3 s) KT1's timed contact 15-16 starts KM2 and motor M2 (H3 lit). STOP (S0) kills both. Classic stamping/ conveyor sequencing demo.",
+ "components": [
+  {
+   "id": "X1",
+   "type": "supply3",
+   "label": "X1",
+   "x": 40,
+   "y": 40
+  },
+  {
+   "id": "Q1",
+   "type": "breaker3",
+   "label": "Q1",
+   "x": 180,
+   "y": 160,
+   "state": {
+    "closed": true
+   }
+  },
+  {
+   "id": "F1",
+   "type": "fuse3",
+   "label": "F1",
+   "x": 320,
+   "y": 320
+  },
+  {
+   "id": "F4",
+   "type": "fuse1",
+   "label": "F4",
+   "x": 640,
+   "y": 300
+  },
+  {
+   "id": "KM1",
+   "type": "contactor",
+   "label": "KM1",
+   "x": 460,
+   "y": 460
+  },
+  {
+   "id": "KK1",
+   "type": "overload",
+   "label": "KK1",
+   "x": 700,
+   "y": 660,
+   "params": {
+    "flc": 10,
+    "trip_class": 10
+   }
+  },
+  {
+   "id": "M1",
+   "type": "motor3",
+   "label": "M1",
+   "x": 900,
+   "y": 480,
+   "params": {
+    "flc": 10,
+    "load": 0.9
+   }
+  },
+  {
+   "id": "KM2",
+   "type": "contactor",
+   "label": "KM2",
+   "x": 460,
+   "y": 760
+  },
+  {
+   "id": "KK2",
+   "type": "overload",
+   "label": "KK2",
+   "x": 700,
+   "y": 960,
+   "params": {
+    "flc": 8,
+    "trip_class": 10
+   }
+  },
+  {
+   "id": "M2",
+   "type": "motor3",
+   "label": "M2",
+   "x": 900,
+   "y": 980,
+   "params": {
+    "flc": 8,
+    "load": 0.9
+   }
+  },
+  {
+   "id": "S0",
+   "type": "pushbutton_nc",
+   "label": "S0 Stop",
+   "x": 900,
+   "y": 300
+  },
+  {
+   "id": "S1",
+   "type": "pushbutton_no",
+   "label": "S1 Start",
+   "x": 900,
+   "y": 430
+  },
+  {
+   "id": "KT1",
+   "type": "timer_on",
+   "label": "KT1",
+   "x": 1080,
+   "y": 430,
+   "params": {
+    "delay": 3
+   }
+  },
+  {
+   "id": "H1",
+   "type": "lamp",
+   "label": "H1 Power",
+   "x": 1240,
+   "y": 300,
+   "params": {
+    "color": "#f5d76e"
+   }
+  },
+  {
+   "id": "H2",
+   "type": "lamp",
+   "label": "H2 M1 running",
+   "x": 1200,
+   "y": 430,
+   "params": {
+    "color": "#38c172"
+   }
+  },
+  {
+   "id": "H3",
+   "type": "lamp",
+   "label": "H3 M2 running",
+   "x": 1150,
+   "y": 560,
+   "params": {
+    "color": "#4fc3f7"
+   }
+  },
+  {
+   "id": "N1",
+   "type": "junction",
+   "label": "N",
+   "x": 1300,
+   "y": 900
+  }
+ ],
+ "wires": [
+  {
+   "from": "X1.L1",
+   "to": "Q1.L1"
+  },
+  {
+   "from": "X1.L2",
+   "to": "Q1.L2"
+  },
+  {
+   "from": "X1.L3",
+   "to": "Q1.L3"
+  },
+  {
+   "from": "Q1.T1",
+   "to": "F1.L1"
+  },
+  {
+   "from": "Q1.T2",
+   "to": "F1.L2"
+  },
+  {
+   "from": "Q1.T3",
+   "to": "F1.L3"
+  },
+  {
+   "from": "F1.T1",
+   "to": "KM1.L1"
+  },
+  {
+   "from": "F1.T2",
+   "to": "KM1.L2"
+  },
+  {
+   "from": "F1.T3",
+   "to": "KM1.L3"
+  },
+  {
+   "from": "F1.T1",
+   "to": "KM2.L1",
+   "waypoints": [
+    [
+     340,
+     445
+    ],
+    [
+     300,
+     445
+    ],
+    [
+     300,
+     760
+    ]
+   ]
+  },
+  {
+   "from": "F1.T2",
+   "to": "KM2.L2",
+   "waypoints": [
+    [
+     370,
+     445
+    ],
+    [
+     290,
+     445
+    ],
+    [
+     290,
+     760
+    ]
+   ]
+  },
+  {
+   "from": "F1.T3",
+   "to": "KM2.L3",
+   "waypoints": [
+    [
+     400,
+     445
+    ],
+    [
+     280,
+     445
+    ],
+    [
+     280,
+     760
+    ]
+   ]
+  },
+  {
+   "from": "KM1.T1",
+   "to": "KK1.L1",
+   "waypoints": [
+    [
+     500,
+     655
+    ],
+    [
+     720,
+     655
+    ]
+   ]
+  },
+  {
+   "from": "KM1.T2",
+   "to": "KK1.L2",
+   "waypoints": [
+    [
+     530,
+     665
+    ],
+    [
+     750,
+     665
+    ]
+   ]
+  },
+  {
+   "from": "KM1.T3",
+   "to": "KK1.L3",
+   "waypoints": [
+    [
+     560,
+     675
+    ],
+    [
+     780,
+     675
+    ]
+   ]
+  },
+  {
+   "from": "KK1.T1",
+   "to": "M1.U",
+   "waypoints": [
+    [
+     720,
+     800
+    ],
+    [
+     905,
+     800
+    ],
+    [
+     905,
+     450
+    ],
+    [
+     920,
+     450
+    ]
+   ]
+  },
+  {
+   "from": "KK1.T2",
+   "to": "M1.V",
+   "waypoints": [
+    [
+     750,
+     810
+    ],
+    [
+     1030,
+     810
+    ],
+    [
+     1030,
+     420
+    ],
+    [
+     950,
+     420
+    ]
+   ]
+  },
+  {
+   "from": "KK1.T3",
+   "to": "M1.W",
+   "waypoints": [
+    [
+     780,
+     820
+    ],
+    [
+     1050,
+     820
+    ],
+    [
+     1050,
+     410
+    ],
+    [
+     980,
+     410
+    ]
+   ]
+  },
+  {
+   "from": "KM2.T1",
+   "to": "KK2.L1",
+   "waypoints": [
+    [
+     500,
+     945
+    ],
+    [
+     720,
+     945
+    ]
+   ]
+  },
+  {
+   "from": "KM2.T2",
+   "to": "KK2.L2",
+   "waypoints": [
+    [
+     530,
+     955
+    ],
+    [
+     750,
+     955
+    ]
+   ]
+  },
+  {
+   "from": "KM2.T3",
+   "to": "KK2.L3",
+   "waypoints": [
+    [
+     560,
+     965
+    ],
+    [
+     780,
+     965
+    ]
+   ]
+  },
+  {
+   "from": "KK2.T1",
+   "to": "M2.U",
+   "waypoints": [
+    [
+     720,
+     1100
+    ],
+    [
+     900,
+     1100
+    ],
+    [
+     900,
+     940
+    ],
+    [
+     920,
+     940
+    ]
+   ]
+  },
+  {
+   "from": "KK2.T2",
+   "to": "M2.V",
+   "waypoints": [
+    [
+     750,
+     1110
+    ],
+    [
+     1030,
+     1110
+    ],
+    [
+     1030,
+     920
+    ],
+    [
+     950,
+     920
+    ]
+   ]
+  },
+  {
+   "from": "KK2.T3",
+   "to": "M2.W",
+   "waypoints": [
+    [
+     780,
+     1120
+    ],
+    [
+     1050,
+     1120
+    ],
+    [
+     1050,
+     910
+    ],
+    [
+     980,
+     910
+    ]
+   ]
+  },
+  {
+   "from": "F1.T1",
+   "to": "F4.L",
+   "waypoints": [
+    [
+     340,
+     455
+    ],
+    [
+     700,
+     455
+    ],
+    [
+     700,
+     270
+    ],
+    [
+     660,
+     270
+    ]
+   ]
+  },
+  {
+   "from": "F4.T",
+   "to": "S0.11",
+   "waypoints": [
+    [
+     660,
+     400
+    ],
+    [
+     990,
+     400
+    ],
+    [
+     990,
+     270
+    ],
+    [
+     930,
+     270
+    ]
+   ]
+  },
+  {
+   "from": "S0.12",
+   "to": "S1.13"
+  },
+  {
+   "from": "S0.12",
+   "to": "KM1.13",
+   "waypoints": [
+    [
+     860,
+     380
+    ],
+    [
+     860,
+     240
+    ],
+    [
+     555,
+     240
+    ],
+    [
+     555,
+     480
+    ]
+   ]
+  },
+  {
+   "from": "KM1.14",
+   "to": "S1.14",
+   "waypoints": [
+    [
+     620,
+     445
+    ],
+    [
+     975,
+     445
+    ],
+    [
+     975,
+     510
+    ]
+   ]
+  },
+  {
+   "from": "S1.14",
+   "to": "KM1.A1",
+   "waypoints": [
+    [
+     975,
+     555
+    ],
+    [
+     595,
+     555
+    ]
+   ]
+  },
+  {
+   "from": "S1.14",
+   "to": "KT1.A1",
+   "waypoints": [
+    [
+     975,
+     390
+    ],
+    [
+     1110,
+     390
+    ]
+   ]
+  },
+  {
+   "from": "S1.14",
+   "to": "KT1.15",
+   "waypoints": [
+    [
+     1140,
+     510
+    ],
+    [
+     1140,
+     520
+    ]
+   ]
+  },
+  {
+   "from": "KM1.A2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     595,
+     690
+    ],
+    [
+     660,
+     690
+    ],
+    [
+     660,
+     895
+    ],
+    [
+     1310,
+     895
+    ]
+   ]
+  },
+  {
+   "from": "KT1.A2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     1160,
+     480
+    ],
+    [
+     1160,
+     880
+    ],
+    [
+     1310,
+     880
+    ]
+   ]
+  },
+  {
+   "from": "KT1.16",
+   "to": "KM2.A1",
+   "waypoints": [
+    [
+     1110,
+     830
+    ],
+    [
+     640,
+     830
+    ],
+    [
+     640,
+     855
+    ],
+    [
+     595,
+     855
+    ]
+   ]
+  },
+  {
+   "from": "F4.T",
+   "to": "H1.1",
+   "waypoints": [
+    [
+     600,
+     400
+    ],
+    [
+     600,
+     260
+    ],
+    [
+     1265,
+     260
+    ]
+   ]
+  },
+  {
+   "from": "S1.14",
+   "to": "H2.1",
+   "waypoints": [
+    [
+     975,
+     445
+    ],
+    [
+     1225,
+     445
+    ]
+   ]
+  },
+  {
+   "from": "H2.2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     1225,
+     510
+    ],
+    [
+     1225,
+     620
+    ],
+    [
+     1310,
+     620
+    ]
+   ]
+  },
+  {
+   "from": "KT1.16",
+   "to": "H3.1"
+  },
+  {
+   "from": "H3.2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     1175,
+     640
+    ],
+    [
+     1175,
+     700
+    ],
+    [
+     1310,
+     700
+    ]
+   ]
+  },
+  {
+   "from": "H1.2",
+   "to": "N1.T"
+  },
+  {
+   "from": "X1.N",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     150,
+     1180
+    ],
+    [
+     1310,
+     1180
+    ]
+   ]
+  },
+  {
+   "from": "KM2.A2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     595,
+     950
+    ],
+    [
+     660,
+     950
+    ],
+    [
+     660,
+     975
+    ],
+    [
+     1250,
+     975
+    ]
+   ]
+  }
+ ],
+ "demo": [
+  {
+   "caption": "VoltLab \u2014 sequenced start via on-delay timer"
+  },
+  {
+   "wait": 2
+  },
+  {
+   "caption": "START: motor 1 runs immediately, KT1 times..."
+  },
+  {
+   "press": "S1"
+  },
+  {
+   "wait": 2
+  },
+  {
+   "release": "S1"
+  },
+  {
+   "wait": 2
+  },
+  {
+   "caption": "...after 3 s the timer starts motor 2"
+  },
+  {
+   "wait": 4.5
+  },
+  {
+   "caption": "STOP resets everything"
+  },
+  {
+   "press": "S0"
+  },
+  {
+   "wait": 1.2
+  },
+  {
+   "release": "S0"
+  },
+  {
+   "wait": 2.5
+  }
+ ]
+}

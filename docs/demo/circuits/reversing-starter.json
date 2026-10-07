@@ -1,0 +1,778 @@
+{
+ "name": "reversing-starter",
+ "description": "Reversing (forward/reverse) DOL starter: KM1 feeds the motor in one phase order, KM2 swaps two phases for reverse. Electrical interlocking via NC aux contacts (KM2 21-22 in the forward path, KM1 21-22 in the reverse path) makes it impossible to energize both at once. Each direction seals in through its own aux contact; S0 stops; KK1 protects the motor. To physically reverse a running motor, press S0 first.",
+ "components": [
+  {
+   "id": "X1",
+   "type": "supply3",
+   "label": "X1",
+   "x": 40,
+   "y": 40
+  },
+  {
+   "id": "Q1",
+   "type": "breaker3",
+   "label": "Q1",
+   "x": 180,
+   "y": 160,
+   "state": {
+    "closed": true
+   }
+  },
+  {
+   "id": "F1",
+   "type": "fuse3",
+   "label": "F1",
+   "x": 320,
+   "y": 320
+  },
+  {
+   "id": "F4",
+   "type": "fuse1",
+   "label": "F4",
+   "x": 700,
+   "y": 300
+  },
+  {
+   "id": "KM1",
+   "type": "contactor",
+   "label": "KM1 Fwd",
+   "x": 460,
+   "y": 460
+  },
+  {
+   "id": "KM2",
+   "type": "contactor",
+   "label": "KM2 Rev",
+   "x": 460,
+   "y": 720
+  },
+  {
+   "id": "KK1",
+   "type": "overload",
+   "label": "KK1",
+   "x": 760,
+   "y": 560,
+   "params": {
+    "flc": 10,
+    "trip_class": 10
+   }
+  },
+  {
+   "id": "M1",
+   "type": "motor3",
+   "label": "M1",
+   "x": 960,
+   "y": 760,
+   "params": {
+    "flc": 10,
+    "load": 0.9
+   }
+  },
+  {
+   "id": "S0",
+   "type": "pushbutton_nc",
+   "label": "S0 Stop",
+   "x": 990,
+   "y": 140,
+   "state": {}
+  },
+  {
+   "id": "S1",
+   "type": "pushbutton_no",
+   "label": "S1 Forward",
+   "x": 1140,
+   "y": 300
+  },
+  {
+   "id": "S2",
+   "type": "pushbutton_no",
+   "label": "S2 Reverse",
+   "x": 1240,
+   "y": 300
+  },
+  {
+   "id": "H1",
+   "type": "lamp",
+   "label": "H1 Forward",
+   "x": 1145,
+   "y": 430,
+   "params": {
+    "color": "#38c172"
+   }
+  },
+  {
+   "id": "H2",
+   "type": "lamp",
+   "label": "H2 Reverse",
+   "x": 1245,
+   "y": 430,
+   "params": {
+    "color": "#4fc3f7"
+   }
+  },
+  {
+   "id": "H3",
+   "type": "lamp",
+   "label": "H3 Power",
+   "x": 1330,
+   "y": 560,
+   "params": {
+    "color": "#f5d76e"
+   }
+  },
+  {
+   "id": "N1",
+   "type": "junction",
+   "label": "N",
+   "x": 1240,
+   "y": 1050
+  }
+ ],
+ "wires": [
+  {
+   "from": "X1.L1",
+   "to": "Q1.L1"
+  },
+  {
+   "from": "X1.L2",
+   "to": "Q1.L2"
+  },
+  {
+   "from": "X1.L3",
+   "to": "Q1.L3"
+  },
+  {
+   "from": "Q1.T1",
+   "to": "F1.L1"
+  },
+  {
+   "from": "Q1.T2",
+   "to": "F1.L2"
+  },
+  {
+   "from": "Q1.T3",
+   "to": "F1.L3"
+  },
+  {
+   "from": "F1.T1",
+   "to": "KM1.L1"
+  },
+  {
+   "from": "F1.T2",
+   "to": "KM1.L2"
+  },
+  {
+   "from": "F1.T3",
+   "to": "KM1.L3"
+  },
+  {
+   "from": "F1.T1",
+   "to": "KM2.L1",
+   "waypoints": [
+    [
+     340,
+     445
+    ],
+    [
+     300,
+     445
+    ],
+    [
+     300,
+     720
+    ]
+   ]
+  },
+  {
+   "from": "F1.T2",
+   "to": "KM2.L2",
+   "waypoints": [
+    [
+     370,
+     445
+    ],
+    [
+     290,
+     445
+    ],
+    [
+     290,
+     720
+    ]
+   ]
+  },
+  {
+   "from": "F1.T3",
+   "to": "KM2.L3",
+   "waypoints": [
+    [
+     400,
+     445
+    ],
+    [
+     280,
+     445
+    ],
+    [
+     280,
+     720
+    ]
+   ]
+  },
+  {
+   "from": "KM1.T1",
+   "to": "KK1.L1"
+  },
+  {
+   "from": "KM1.T2",
+   "to": "KK1.L2",
+   "waypoints": [
+    [
+     530,
+     568
+    ],
+    [
+     810,
+     568
+    ]
+   ]
+  },
+  {
+   "from": "KM1.T3",
+   "to": "KK1.L3",
+   "waypoints": [
+    [
+     560,
+     576
+    ],
+    [
+     840,
+     576
+    ]
+   ]
+  },
+  {
+   "from": "KM2.T1",
+   "to": "KK1.L1",
+   "waypoints": [
+    [
+     660,
+     820
+    ],
+    [
+     660,
+     530
+    ],
+    [
+     780,
+     530
+    ]
+   ]
+  },
+  {
+   "from": "KM2.T2",
+   "to": "KK1.L3",
+   "waypoints": [
+    [
+     675,
+     820
+    ],
+    [
+     675,
+     522
+    ],
+    [
+     840,
+     522
+    ]
+   ]
+  },
+  {
+   "from": "KM2.T3",
+   "to": "KK1.L2",
+   "waypoints": [
+    [
+     690,
+     820
+    ],
+    [
+     690,
+     514
+    ],
+    [
+     810,
+     514
+    ]
+   ]
+  },
+  {
+   "from": "KK1.T1",
+   "to": "M1.U",
+   "waypoints": [
+    [
+     780,
+     720
+    ],
+    [
+     980,
+     720
+    ]
+   ]
+  },
+  {
+   "from": "KK1.T2",
+   "to": "M1.V",
+   "waypoints": [
+    [
+     810,
+     730
+    ],
+    [
+     1010,
+     730
+    ]
+   ]
+  },
+  {
+   "from": "KK1.T3",
+   "to": "M1.W",
+   "waypoints": [
+    [
+     840,
+     740
+    ],
+    [
+     1040,
+     740
+    ]
+   ]
+  },
+  {
+   "from": "F1.T1",
+   "to": "F4.L",
+   "waypoints": [
+    [
+     340,
+     445
+    ],
+    [
+     720,
+     445
+    ],
+    [
+     720,
+     270
+    ]
+   ]
+  },
+  {
+   "from": "F4.T",
+   "to": "S0.11",
+   "waypoints": [
+    [
+     960,
+     410
+    ],
+    [
+     960,
+     90
+    ],
+    [
+     1020,
+     90
+    ]
+   ]
+  },
+  {
+   "from": "KK1.96",
+   "to": "KM2.21",
+   "waypoints": [
+    [
+     975,
+     580
+    ],
+    [
+     975,
+     620
+    ],
+    [
+     555,
+     620
+    ],
+    [
+     555,
+     770
+    ]
+   ]
+  },
+  {
+   "from": "KM2.22",
+   "to": "S1.13",
+   "waypoints": [
+    [
+     700,
+     770
+    ],
+    [
+     700,
+     255
+    ],
+    [
+     1170,
+     255
+    ]
+   ]
+  },
+  {
+   "from": "S1.14",
+   "to": "KM1.A1",
+   "waypoints": [
+    [
+     1195,
+     380
+    ],
+    [
+     1195,
+     420
+    ],
+    [
+     565,
+     420
+    ],
+    [
+     565,
+     545
+    ],
+    [
+     595,
+     545
+    ]
+   ]
+  },
+  {
+   "from": "KM2.22",
+   "to": "KM1.13",
+   "waypoints": [
+    [
+     620,
+     770
+    ],
+    [
+     635,
+     770
+    ],
+    [
+     635,
+     430
+    ],
+    [
+     570,
+     430
+    ]
+   ]
+  },
+  {
+   "from": "KM1.22",
+   "to": "S2.13",
+   "waypoints": [
+    [
+     645,
+     510
+    ],
+    [
+     645,
+     240
+    ],
+    [
+     1270,
+     240
+    ]
+   ]
+  },
+  {
+   "from": "KM1.22",
+   "to": "KM2.13",
+   "waypoints": [
+    [
+     645,
+     510
+    ],
+    [
+     645,
+     745
+    ],
+    [
+     570,
+     745
+    ]
+   ]
+  },
+  {
+   "from": "S2.14",
+   "to": "KM2.A1",
+   "waypoints": [
+    [
+     1295,
+     380
+    ],
+    [
+     1295,
+     810
+    ],
+    [
+     640,
+     810
+    ],
+    [
+     640,
+     830
+    ]
+   ]
+  },
+  {
+   "from": "KM2.14",
+   "to": "S2.14",
+   "waypoints": [
+    [
+     620,
+     715
+    ],
+    [
+     1345,
+     715
+    ],
+    [
+     1345,
+     410
+    ],
+    [
+     1270,
+     410
+    ]
+   ]
+  },
+  {
+   "from": "S1.14",
+   "to": "H1.1"
+  },
+  {
+   "from": "H1.2",
+   "to": "N1.T"
+  },
+  {
+   "from": "S2.14",
+   "to": "H2.1"
+  },
+  {
+   "from": "H2.2",
+   "to": "N1.T"
+  },
+  {
+   "from": "KK1.96",
+   "to": "H3.1",
+   "waypoints": [
+    [
+     1355,
+     580
+    ]
+   ]
+  },
+  {
+   "from": "H3.2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     1355,
+     930
+    ],
+    [
+     1250,
+     930
+    ]
+   ]
+  },
+  {
+   "from": "KM1.A2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     595,
+     690
+    ],
+    [
+     660,
+     690
+    ],
+    [
+     660,
+     955
+    ],
+    [
+     1250,
+     955
+    ]
+   ]
+  },
+  {
+   "from": "KM2.A2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     595,
+     950
+    ],
+    [
+     660,
+     950
+    ],
+    [
+     660,
+     975
+    ],
+    [
+     1250,
+     975
+    ]
+   ]
+  },
+  {
+   "from": "X1.N",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     150,
+     1150
+    ],
+    [
+     1250,
+     1150
+    ]
+   ]
+  },
+  {
+   "from": "S0.12",
+   "to": "KK1.95",
+   "waypoints": [
+    [
+     1020,
+     500
+    ],
+    [
+     885,
+     500
+    ]
+   ]
+  },
+  {
+   "from": "KM1.14",
+   "to": "S1.14",
+   "waypoints": [
+    [
+     600,
+     480
+    ],
+    [
+     600,
+     380
+    ]
+   ]
+  },
+  {
+   "from": "KK1.96",
+   "to": "KM1.21",
+   "waypoints": [
+    [
+     935,
+     538
+    ],
+    [
+     555,
+     538
+    ],
+    [
+     555,
+     510
+    ],
+    [
+     570,
+     510
+    ]
+   ]
+  }
+ ],
+ "demo": [
+  {
+   "caption": "VoltLab \u2014 reversing starter: forward"
+  },
+  {
+   "wait": 2
+  },
+  {
+   "press": "S1"
+  },
+  {
+   "wait": 1.5
+  },
+  {
+   "release": "S1"
+  },
+  {
+   "wait": 3
+  },
+  {
+   "caption": "Reverse is interlocked while running forward"
+  },
+  {
+   "press": "S2"
+  },
+  {
+   "wait": 1.2
+  },
+  {
+   "release": "S2"
+  },
+  {
+   "wait": 1.5
+  },
+  {
+   "caption": "STOP, then reverse"
+  },
+  {
+   "press": "S0"
+  },
+  {
+   "wait": 1.2
+  },
+  {
+   "release": "S0"
+  },
+  {
+   "wait": 2.5
+  },
+  {
+   "press": "S2"
+  },
+  {
+   "wait": 1.5
+  },
+  {
+   "release": "S2"
+  },
+  {
+   "wait": 3
+  },
+  {
+   "press": "S0"
+  },
+  {
+   "wait": 1.2
+  },
+  {
+   "release": "S0"
+  },
+  {
+   "wait": 2
+  }
+ ]
+}

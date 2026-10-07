@@ -44,6 +44,12 @@ https://github.com/touhidsiddiqueeraj-bit/voltlab/raw/main/docs/media/dol-starte
 
 ## Quick start
 
+**⚡ Live demo, zero install:** the `docs/` folder doubles as a
+[GitHub Pages](https://pages.github.com/) site with the **real simulator running in your
+browser** — enable *Settings → Pages → Deploy from branch → `main` → `/docs`* and open
+`https://<user>.github.io/voltlab/`. The demo page embeds the actual `sim/engine.js`
+(client-side; no backend needed for the interactive tour).
+
 ```bash
 git clone https://github.com/touhidsiddiqueeraj-bit/voltlab.git
 cd voltlab
@@ -97,6 +103,7 @@ contactors and the 3-deck floor cam.*
 
 | Doc | Contents |
 |---|---|
+| [Live demo](https://touhidsiddiqueeraj-bit.github.io/voltlab/) | The real engine running on GitHub Pages — no install |
 | [docs/architecture.md](docs/architecture.md) | How the engine, host, UI and MCP layer fit together; the solver model; design constraints |
 | [docs/mcp.md](docs/mcp.md) | Complete 26-tool MCP reference + raw HTTP equivalents + worked agent session |
 | [docs/circuit-format.md](docs/circuit-format.md) | The circuit JSON schema — components, wires, waypoints, demo scripts |
@@ -201,9 +208,9 @@ app/              the web UI (IEC SVG symbols, palette, wiring, inspector, log d
 electron/main.mjs Electron shell (+ --smoke / --screenshot / --headless / --check modes)
 mcp/server.mjs    MCP stdio server → proxies tools/call to the HTTP API
 circuits/         circuit library (5 examples, JSON)
-scripts/          generator for the 10-floor elevator circuit
+scripts/          generator for the 10-floor elevator circuit + demo-page sync
 test/             engine tests + example-circuit tests + MCP end-to-end
-docs/             architecture, MCP reference, circuit format, examples
+docs/             GitHub Pages site: landing page + live demo + deep-dive docs
 ```
 
 ## Environment variables

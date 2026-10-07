@@ -17,6 +17,19 @@ npm run serve        # web UI on http://127.0.0.1:8123
 There is no build step — edit files and reload the browser tab. The dev server sends
 `Cache-Control: no-cache`, so assets always revalidate.
 
+### GitHub Pages demo
+
+`docs/` doubles as the Pages site: a landing page (`docs/index.html`) plus a live demo
+(`docs/demo/`) that runs the **real engine client-side**. The demo vendors copies of
+`sim/engine.js`, `sim/devices.js`, `app/js/render.js`, `app/js/symbols.js`,
+`app/css/app.css` and the circuits — after changing any of those, refresh the vendored
+copies and check the demo still behaves:
+
+```bash
+./scripts/sync_demo.sh
+python3 -m http.server -d docs 8124   # then open http://127.0.0.1:8124/
+```
+
 ## Test layout
 
 | Command | What it covers |

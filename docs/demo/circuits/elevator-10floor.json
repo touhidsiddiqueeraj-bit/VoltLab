@@ -1,0 +1,1658 @@
+{
+ "name": "elevator-10floor",
+ "description": "Full 10-story relay elevator. Car position is a two-deck floor cam (CAM1): deck A routes 'call pending' power to the current floor, deck B (complement) enables call registration for every floor the car is NOT at. Floor calls latch in relays K1..K10 (lamps H1..H10); the run contactor KM_run dies when the cam reaches a called floor (F(n) through K(n).21-22), which also resets that call via its deck-B seal \u2014 so pending calls auto-dispatch. Direction selectors (SelUp/SelDn) choose KM_up/KM_dn. Try: press a floor button, then advance CAM1 floor by floor.",
+ "components": [
+  {
+   "id": "X1",
+   "type": "supply3",
+   "label": "X1",
+   "x": 40,
+   "y": 40
+  },
+  {
+   "id": "Q1",
+   "type": "breaker3",
+   "label": "Q1",
+   "x": 180,
+   "y": 160,
+   "state": {
+    "closed": true
+   }
+  },
+  {
+   "id": "F1",
+   "type": "fuse3",
+   "label": "F1",
+   "x": 320,
+   "y": 320
+  },
+  {
+   "id": "KM_run",
+   "type": "contactor",
+   "label": "KM_run",
+   "x": 460,
+   "y": 460
+  },
+  {
+   "id": "KK1",
+   "type": "overload",
+   "label": "KK1",
+   "x": 700,
+   "y": 460,
+   "params": {
+    "flc": 15,
+    "trip_class": 10
+   }
+  },
+  {
+   "id": "KM_up",
+   "type": "contactor",
+   "label": "KM_up",
+   "x": 900,
+   "y": 460
+  },
+  {
+   "id": "KM_dn",
+   "type": "contactor",
+   "label": "KM_dn",
+   "x": 900,
+   "y": 760
+  },
+  {
+   "id": "M1",
+   "type": "motor3",
+   "label": "M1 Hoist",
+   "x": 1160,
+   "y": 560,
+   "params": {
+    "flc": 15,
+    "load": 0.9
+   }
+  },
+  {
+   "id": "F4",
+   "type": "fuse1",
+   "label": "F4",
+   "x": 1320,
+   "y": 320
+  },
+  {
+   "id": "CAM1",
+   "type": "cam10",
+   "label": "CAM1 Car pos",
+   "x": 1380,
+   "y": 470,
+   "state": {
+    "position": 1
+   }
+  },
+  {
+   "id": "SelUp",
+   "type": "selector2",
+   "label": "SelUp",
+   "x": 1380,
+   "y": 920,
+   "state": {
+    "pos": "1"
+   }
+  },
+  {
+   "id": "SelDn",
+   "type": "selector2",
+   "label": "SelDn",
+   "x": 1380,
+   "y": 1060
+  },
+  {
+   "id": "KP",
+   "type": "contactor",
+   "label": "KP Dispatch",
+   "x": 1300,
+   "y": 1240
+  },
+  {
+   "id": "KT_dwell",
+   "type": "timer_on",
+   "label": "KT_dwell",
+   "x": 1300,
+   "y": 1480,
+   "params": {
+    "delay": 1.5
+   }
+  },
+  {
+   "id": "R1",
+   "type": "junction",
+   "label": "R (run)",
+   "x": 1330,
+   "y": 1310
+  },
+  {
+   "id": "N1",
+   "type": "junction",
+   "label": "N",
+   "x": 80,
+   "y": 1240
+  },
+  {
+   "id": "S1",
+   "type": "pushbutton_no",
+   "label": "S1 Floor 1",
+   "x": 760,
+   "y": 1100
+  },
+  {
+   "id": "K1",
+   "type": "contactor",
+   "label": "K1",
+   "x": 420,
+   "y": 1100
+  },
+  {
+   "id": "H1",
+   "type": "lamp",
+   "label": "H1",
+   "x": 980,
+   "y": 1100,
+   "params": {
+    "color": "#ffb454"
+   }
+  },
+  {
+   "id": "S2",
+   "type": "pushbutton_no",
+   "label": "S2 Floor 2",
+   "x": 760,
+   "y": 1330
+  },
+  {
+   "id": "K2",
+   "type": "contactor",
+   "label": "K2",
+   "x": 420,
+   "y": 1330
+  },
+  {
+   "id": "H2",
+   "type": "lamp",
+   "label": "H2",
+   "x": 980,
+   "y": 1330,
+   "params": {
+    "color": "#ffb454"
+   }
+  },
+  {
+   "id": "S3",
+   "type": "pushbutton_no",
+   "label": "S3 Floor 3",
+   "x": 760,
+   "y": 1560
+  },
+  {
+   "id": "K3",
+   "type": "contactor",
+   "label": "K3",
+   "x": 420,
+   "y": 1560
+  },
+  {
+   "id": "H3",
+   "type": "lamp",
+   "label": "H3",
+   "x": 980,
+   "y": 1560,
+   "params": {
+    "color": "#ffb454"
+   }
+  },
+  {
+   "id": "S4",
+   "type": "pushbutton_no",
+   "label": "S4 Floor 4",
+   "x": 760,
+   "y": 1790
+  },
+  {
+   "id": "K4",
+   "type": "contactor",
+   "label": "K4",
+   "x": 420,
+   "y": 1790
+  },
+  {
+   "id": "H4",
+   "type": "lamp",
+   "label": "H4",
+   "x": 980,
+   "y": 1790,
+   "params": {
+    "color": "#ffb454"
+   }
+  },
+  {
+   "id": "S5",
+   "type": "pushbutton_no",
+   "label": "S5 Floor 5",
+   "x": 760,
+   "y": 2020
+  },
+  {
+   "id": "K5",
+   "type": "contactor",
+   "label": "K5",
+   "x": 420,
+   "y": 2020
+  },
+  {
+   "id": "H5",
+   "type": "lamp",
+   "label": "H5",
+   "x": 980,
+   "y": 2020,
+   "params": {
+    "color": "#ffb454"
+   }
+  },
+  {
+   "id": "S6",
+   "type": "pushbutton_no",
+   "label": "S6 Floor 6",
+   "x": 760,
+   "y": 2250
+  },
+  {
+   "id": "K6",
+   "type": "contactor",
+   "label": "K6",
+   "x": 420,
+   "y": 2250
+  },
+  {
+   "id": "H6",
+   "type": "lamp",
+   "label": "H6",
+   "x": 980,
+   "y": 2250,
+   "params": {
+    "color": "#ffb454"
+   }
+  },
+  {
+   "id": "S7",
+   "type": "pushbutton_no",
+   "label": "S7 Floor 7",
+   "x": 760,
+   "y": 2480
+  },
+  {
+   "id": "K7",
+   "type": "contactor",
+   "label": "K7",
+   "x": 420,
+   "y": 2480
+  },
+  {
+   "id": "H7",
+   "type": "lamp",
+   "label": "H7",
+   "x": 980,
+   "y": 2480,
+   "params": {
+    "color": "#ffb454"
+   }
+  },
+  {
+   "id": "S8",
+   "type": "pushbutton_no",
+   "label": "S8 Floor 8",
+   "x": 760,
+   "y": 2710
+  },
+  {
+   "id": "K8",
+   "type": "contactor",
+   "label": "K8",
+   "x": 420,
+   "y": 2710
+  },
+  {
+   "id": "H8",
+   "type": "lamp",
+   "label": "H8",
+   "x": 980,
+   "y": 2710,
+   "params": {
+    "color": "#ffb454"
+   }
+  },
+  {
+   "id": "S9",
+   "type": "pushbutton_no",
+   "label": "S9 Floor 9",
+   "x": 760,
+   "y": 2940
+  },
+  {
+   "id": "K9",
+   "type": "contactor",
+   "label": "K9",
+   "x": 420,
+   "y": 2940
+  },
+  {
+   "id": "H9",
+   "type": "lamp",
+   "label": "H9",
+   "x": 980,
+   "y": 2940,
+   "params": {
+    "color": "#ffb454"
+   }
+  },
+  {
+   "id": "S10",
+   "type": "pushbutton_no",
+   "label": "S10 Floor 10",
+   "x": 760,
+   "y": 3170
+  },
+  {
+   "id": "K10",
+   "type": "contactor",
+   "label": "K10",
+   "x": 420,
+   "y": 3170
+  },
+  {
+   "id": "H10",
+   "type": "lamp",
+   "label": "H10",
+   "x": 980,
+   "y": 3170,
+   "params": {
+    "color": "#ffb454"
+   }
+  }
+ ],
+ "wires": [
+  {
+   "from": "X1.L1",
+   "to": "Q1.L1"
+  },
+  {
+   "from": "X1.L2",
+   "to": "Q1.L2"
+  },
+  {
+   "from": "X1.L3",
+   "to": "Q1.L3"
+  },
+  {
+   "from": "Q1.T1",
+   "to": "F1.L1"
+  },
+  {
+   "from": "Q1.T2",
+   "to": "F1.L2"
+  },
+  {
+   "from": "Q1.T3",
+   "to": "F1.L3"
+  },
+  {
+   "from": "F1.T1",
+   "to": "KM_run.L1"
+  },
+  {
+   "from": "F1.T2",
+   "to": "KM_run.L2"
+  },
+  {
+   "from": "F1.T3",
+   "to": "KM_run.L3"
+  },
+  {
+   "from": "KM_run.T1",
+   "to": "KK1.L1"
+  },
+  {
+   "from": "KM_run.T2",
+   "to": "KK1.L2"
+  },
+  {
+   "from": "KM_run.T3",
+   "to": "KK1.L3"
+  },
+  {
+   "from": "KK1.T1",
+   "to": "M1.U"
+  },
+  {
+   "from": "KK1.T2",
+   "to": "M1.V"
+  },
+  {
+   "from": "KK1.T3",
+   "to": "M1.W"
+  },
+  {
+   "from": "KM_run.T1",
+   "to": "KM_up.L1",
+   "waypoints": [
+    [
+     590,
+     590
+    ],
+    [
+     590,
+     488
+    ],
+    [
+     890,
+     488
+    ]
+   ]
+  },
+  {
+   "from": "KM_run.T2",
+   "to": "KM_up.L2",
+   "waypoints": [
+    [
+     600,
+     590
+    ],
+    [
+     600,
+     496
+    ],
+    [
+     920,
+     496
+    ]
+   ]
+  },
+  {
+   "from": "KM_run.T3",
+   "to": "KM_up.L3",
+   "waypoints": [
+    [
+     610,
+     590
+    ],
+    [
+     610,
+     504
+    ],
+    [
+     950,
+     504
+    ]
+   ]
+  },
+  {
+   "from": "KM_run.T1",
+   "to": "KM_dn.L1",
+   "waypoints": [
+    [
+     575,
+     590
+    ],
+    [
+     575,
+     640
+    ],
+    [
+     890,
+     640
+    ],
+    [
+     890,
+     788
+    ]
+   ]
+  },
+  {
+   "from": "KM_run.T2",
+   "to": "KM_dn.L2",
+   "waypoints": [
+    [
+     585,
+     590
+    ],
+    [
+     585,
+     650
+    ],
+    [
+     920,
+     650
+    ],
+    [
+     920,
+     788
+    ]
+   ]
+  },
+  {
+   "from": "KM_run.T3",
+   "to": "KM_dn.L3",
+   "waypoints": [
+    [
+     595,
+     590
+    ],
+    [
+     595,
+     660
+    ],
+    [
+     950,
+     660
+    ],
+    [
+     950,
+     788
+    ]
+   ]
+  },
+  {
+   "from": "F1.T1",
+   "to": "KK1.95"
+  },
+  {
+   "from": "KK1.96",
+   "to": "F4.L",
+   "waypoints": [
+    [
+     760,
+     620
+    ],
+    [
+     760,
+     250
+    ],
+    [
+     1340,
+     250
+    ],
+    [
+     1340,
+     290
+    ]
+   ]
+  },
+  {
+   "from": "F4.T",
+   "to": "CAM1.GC"
+  },
+  {
+   "from": "KP.A2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     1360,
+     1310
+    ],
+    [
+     1360,
+     1420
+    ],
+    [
+     120,
+     1420
+    ],
+    [
+     120,
+     1250
+    ]
+   ]
+  },
+  {
+   "from": "R1.T",
+   "to": "KP.13"
+  },
+  {
+   "from": "KP.14",
+   "to": "KT_dwell.A1",
+   "waypoints": [
+    [
+     1410,
+     1310
+    ],
+    [
+     1405,
+     1310
+    ],
+    [
+     1405,
+     1500
+    ]
+   ]
+  },
+  {
+   "from": "KT_dwell.A2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     1330,
+     1530
+    ],
+    [
+     1330,
+     1560
+    ],
+    [
+     120,
+     1560
+    ],
+    [
+     120,
+     1250
+    ]
+   ]
+  },
+  {
+   "from": "KT_dwell.16",
+   "to": "KM_run.A1",
+   "waypoints": [
+    [
+     1330,
+     1610
+    ],
+    [
+     1470,
+     1610
+    ],
+    [
+     1470,
+     1370
+    ],
+    [
+     595,
+     1370
+    ],
+    [
+     595,
+     597
+    ]
+   ]
+  },
+  {
+   "from": "KT_dwell.16",
+   "to": "SelUp.13",
+   "waypoints": [
+    [
+     1330,
+     1610
+    ],
+    [
+     1400,
+     1610
+    ],
+    [
+     1400,
+     1090
+    ],
+    [
+     1405,
+     1090
+    ],
+    [
+     1405,
+     950
+    ]
+   ]
+  },
+  {
+   "from": "KT_dwell.16",
+   "to": "SelDn.13",
+   "waypoints": [
+    [
+     1330,
+     1610
+    ],
+    [
+     1420,
+     1610
+    ],
+    [
+     1420,
+     1090
+    ]
+   ]
+  },
+  {
+   "from": "R1.T",
+   "to": "KT_dwell.15",
+   "waypoints": [
+    [
+     1340,
+     1310
+    ],
+    [
+     1290,
+     1310
+    ],
+    [
+     1290,
+     1560
+    ]
+   ]
+  },
+  {
+   "from": "F4.T",
+   "to": "KP.43",
+   "waypoints": [
+    [
+     1350,
+     390
+    ],
+    [
+     1470,
+     390
+    ],
+    [
+     1470,
+     1300
+    ]
+   ]
+  },
+  {
+   "from": "KP.44",
+   "to": "CAM1.COM",
+   "waypoints": [
+    [
+     1470,
+     1380
+    ],
+    [
+     1470,
+     1430
+    ],
+    [
+     1400,
+     1430
+    ],
+    [
+     1400,
+     500
+    ]
+   ]
+  },
+  {
+   "from": "SelUp.14",
+   "to": "KM_up.A1",
+   "waypoints": [
+    [
+     1410,
+     1000
+    ],
+    [
+     1410,
+     600
+    ],
+    [
+     1035,
+     600
+    ],
+    [
+     1035,
+     597
+    ]
+   ]
+  },
+  {
+   "from": "SelDn.14",
+   "to": "KM_dn.A1",
+   "waypoints": [
+    [
+     1410,
+     1140
+    ],
+    [
+     1410,
+     900
+    ],
+    [
+     1035,
+     900
+    ],
+    [
+     1035,
+     897
+    ]
+   ]
+  },
+  {
+   "from": "KM_run.A2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     595,
+     670
+    ],
+    [
+     595,
+     710
+    ],
+    [
+     120,
+     710
+    ],
+    [
+     120,
+     1250
+    ]
+   ]
+  },
+  {
+   "from": "KM_up.A2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     1035,
+     650
+    ],
+    [
+     1035,
+     700
+    ],
+    [
+     120,
+     700
+    ],
+    [
+     120,
+     1250
+    ]
+   ]
+  },
+  {
+   "from": "KM_dn.A2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     1035,
+     950
+    ],
+    [
+     1035,
+     1000
+    ],
+    [
+     120,
+     1000
+    ],
+    [
+     120,
+     1250
+    ]
+   ]
+  },
+  {
+   "from": "X1.N",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     90,
+     100
+    ],
+    [
+     90,
+     1250
+    ]
+   ]
+  },
+  {
+   "from": "CAM1.F1",
+   "to": "K1.21"
+  },
+  {
+   "from": "CAM1.F2",
+   "to": "K2.21"
+  },
+  {
+   "from": "CAM1.F3",
+   "to": "K3.21"
+  },
+  {
+   "from": "CAM1.F4",
+   "to": "K4.21"
+  },
+  {
+   "from": "CAM1.F5",
+   "to": "K5.21"
+  },
+  {
+   "from": "CAM1.F6",
+   "to": "K6.21"
+  },
+  {
+   "from": "CAM1.F7",
+   "to": "K7.21"
+  },
+  {
+   "from": "CAM1.F8",
+   "to": "K8.21"
+  },
+  {
+   "from": "CAM1.F9",
+   "to": "K9.21"
+  },
+  {
+   "from": "CAM1.F10",
+   "to": "K10.21"
+  },
+  {
+   "from": "F4.T",
+   "to": "CAM1.GH1"
+  },
+  {
+   "from": "CAM1.G1",
+   "to": "S1.13"
+  },
+  {
+   "from": "S1.14",
+   "to": "K1.14"
+  },
+  {
+   "from": "CAM1.G1",
+   "to": "K1.13"
+  },
+  {
+   "from": "K1.14",
+   "to": "K1.A1"
+  },
+  {
+   "from": "K1.14",
+   "to": "K1.43"
+  },
+  {
+   "from": "K1.44",
+   "to": "CAM1.H1"
+  },
+  {
+   "from": "CAM1.HH1",
+   "to": "KP.A1"
+  },
+  {
+   "from": "K1.A2",
+   "to": "N1.T"
+  },
+  {
+   "from": "K1.22",
+   "to": "R1.T"
+  },
+  {
+   "from": "K1.A1",
+   "to": "H1.1"
+  },
+  {
+   "from": "H1.2",
+   "to": "N1.T"
+  },
+  {
+   "from": "F4.T",
+   "to": "CAM1.GH2"
+  },
+  {
+   "from": "CAM1.G2",
+   "to": "S2.13"
+  },
+  {
+   "from": "S2.14",
+   "to": "K2.14"
+  },
+  {
+   "from": "CAM1.G2",
+   "to": "K2.13"
+  },
+  {
+   "from": "K2.14",
+   "to": "K2.A1"
+  },
+  {
+   "from": "K2.14",
+   "to": "K2.43"
+  },
+  {
+   "from": "K2.44",
+   "to": "CAM1.H2"
+  },
+  {
+   "from": "CAM1.HH2",
+   "to": "KP.A1"
+  },
+  {
+   "from": "K2.A2",
+   "to": "N1.T"
+  },
+  {
+   "from": "K2.22",
+   "to": "R1.T"
+  },
+  {
+   "from": "K2.A1",
+   "to": "H2.1"
+  },
+  {
+   "from": "H2.2",
+   "to": "N1.T"
+  },
+  {
+   "from": "F4.T",
+   "to": "CAM1.GH3"
+  },
+  {
+   "from": "CAM1.G3",
+   "to": "S3.13"
+  },
+  {
+   "from": "S3.14",
+   "to": "K3.14"
+  },
+  {
+   "from": "CAM1.G3",
+   "to": "K3.13"
+  },
+  {
+   "from": "K3.14",
+   "to": "K3.A1"
+  },
+  {
+   "from": "K3.14",
+   "to": "K3.43"
+  },
+  {
+   "from": "K3.44",
+   "to": "CAM1.H3"
+  },
+  {
+   "from": "CAM1.HH3",
+   "to": "KP.A1"
+  },
+  {
+   "from": "K3.A2",
+   "to": "N1.T"
+  },
+  {
+   "from": "K3.22",
+   "to": "R1.T"
+  },
+  {
+   "from": "K3.A1",
+   "to": "H3.1"
+  },
+  {
+   "from": "H3.2",
+   "to": "N1.T"
+  },
+  {
+   "from": "F4.T",
+   "to": "CAM1.GH4"
+  },
+  {
+   "from": "CAM1.G4",
+   "to": "S4.13"
+  },
+  {
+   "from": "S4.14",
+   "to": "K4.14"
+  },
+  {
+   "from": "CAM1.G4",
+   "to": "K4.13"
+  },
+  {
+   "from": "K4.14",
+   "to": "K4.A1"
+  },
+  {
+   "from": "K4.14",
+   "to": "K4.43"
+  },
+  {
+   "from": "K4.44",
+   "to": "CAM1.H4"
+  },
+  {
+   "from": "CAM1.HH4",
+   "to": "KP.A1"
+  },
+  {
+   "from": "K4.A2",
+   "to": "N1.T"
+  },
+  {
+   "from": "K4.22",
+   "to": "R1.T"
+  },
+  {
+   "from": "K4.A1",
+   "to": "H4.1"
+  },
+  {
+   "from": "H4.2",
+   "to": "N1.T"
+  },
+  {
+   "from": "F4.T",
+   "to": "CAM1.GH5"
+  },
+  {
+   "from": "CAM1.G5",
+   "to": "S5.13"
+  },
+  {
+   "from": "S5.14",
+   "to": "K5.14"
+  },
+  {
+   "from": "CAM1.G5",
+   "to": "K5.13"
+  },
+  {
+   "from": "K5.14",
+   "to": "K5.A1"
+  },
+  {
+   "from": "K5.14",
+   "to": "K5.43"
+  },
+  {
+   "from": "K5.44",
+   "to": "CAM1.H5"
+  },
+  {
+   "from": "CAM1.HH5",
+   "to": "KP.A1"
+  },
+  {
+   "from": "K5.A2",
+   "to": "N1.T"
+  },
+  {
+   "from": "K5.22",
+   "to": "R1.T"
+  },
+  {
+   "from": "K5.A1",
+   "to": "H5.1"
+  },
+  {
+   "from": "H5.2",
+   "to": "N1.T"
+  },
+  {
+   "from": "F4.T",
+   "to": "CAM1.GH6"
+  },
+  {
+   "from": "CAM1.G6",
+   "to": "S6.13"
+  },
+  {
+   "from": "S6.14",
+   "to": "K6.14"
+  },
+  {
+   "from": "CAM1.G6",
+   "to": "K6.13"
+  },
+  {
+   "from": "K6.14",
+   "to": "K6.A1"
+  },
+  {
+   "from": "K6.14",
+   "to": "K6.43"
+  },
+  {
+   "from": "K6.44",
+   "to": "CAM1.H6"
+  },
+  {
+   "from": "CAM1.HH6",
+   "to": "KP.A1"
+  },
+  {
+   "from": "K6.A2",
+   "to": "N1.T"
+  },
+  {
+   "from": "K6.22",
+   "to": "R1.T"
+  },
+  {
+   "from": "K6.A1",
+   "to": "H6.1"
+  },
+  {
+   "from": "H6.2",
+   "to": "N1.T"
+  },
+  {
+   "from": "F4.T",
+   "to": "CAM1.GH7"
+  },
+  {
+   "from": "CAM1.G7",
+   "to": "S7.13"
+  },
+  {
+   "from": "S7.14",
+   "to": "K7.14"
+  },
+  {
+   "from": "CAM1.G7",
+   "to": "K7.13"
+  },
+  {
+   "from": "K7.14",
+   "to": "K7.A1"
+  },
+  {
+   "from": "K7.14",
+   "to": "K7.43"
+  },
+  {
+   "from": "K7.44",
+   "to": "CAM1.H7"
+  },
+  {
+   "from": "CAM1.HH7",
+   "to": "KP.A1"
+  },
+  {
+   "from": "K7.A2",
+   "to": "N1.T"
+  },
+  {
+   "from": "K7.22",
+   "to": "R1.T"
+  },
+  {
+   "from": "K7.A1",
+   "to": "H7.1"
+  },
+  {
+   "from": "H7.2",
+   "to": "N1.T"
+  },
+  {
+   "from": "F4.T",
+   "to": "CAM1.GH8"
+  },
+  {
+   "from": "CAM1.G8",
+   "to": "S8.13"
+  },
+  {
+   "from": "S8.14",
+   "to": "K8.14"
+  },
+  {
+   "from": "CAM1.G8",
+   "to": "K8.13"
+  },
+  {
+   "from": "K8.14",
+   "to": "K8.A1"
+  },
+  {
+   "from": "K8.14",
+   "to": "K8.43"
+  },
+  {
+   "from": "K8.44",
+   "to": "CAM1.H8"
+  },
+  {
+   "from": "CAM1.HH8",
+   "to": "KP.A1"
+  },
+  {
+   "from": "K8.A2",
+   "to": "N1.T"
+  },
+  {
+   "from": "K8.22",
+   "to": "R1.T"
+  },
+  {
+   "from": "K8.A1",
+   "to": "H8.1"
+  },
+  {
+   "from": "H8.2",
+   "to": "N1.T"
+  },
+  {
+   "from": "F4.T",
+   "to": "CAM1.GH9"
+  },
+  {
+   "from": "CAM1.G9",
+   "to": "S9.13"
+  },
+  {
+   "from": "S9.14",
+   "to": "K9.14"
+  },
+  {
+   "from": "CAM1.G9",
+   "to": "K9.13"
+  },
+  {
+   "from": "K9.14",
+   "to": "K9.A1"
+  },
+  {
+   "from": "K9.14",
+   "to": "K9.43"
+  },
+  {
+   "from": "K9.44",
+   "to": "CAM1.H9"
+  },
+  {
+   "from": "CAM1.HH9",
+   "to": "KP.A1"
+  },
+  {
+   "from": "K9.A2",
+   "to": "N1.T"
+  },
+  {
+   "from": "K9.22",
+   "to": "R1.T"
+  },
+  {
+   "from": "K9.A1",
+   "to": "H9.1"
+  },
+  {
+   "from": "H9.2",
+   "to": "N1.T"
+  },
+  {
+   "from": "F4.T",
+   "to": "CAM1.GH10"
+  },
+  {
+   "from": "CAM1.G10",
+   "to": "S10.13"
+  },
+  {
+   "from": "S10.14",
+   "to": "K10.14"
+  },
+  {
+   "from": "CAM1.G10",
+   "to": "K10.13"
+  },
+  {
+   "from": "K10.14",
+   "to": "K10.A1"
+  },
+  {
+   "from": "K10.14",
+   "to": "K10.43"
+  },
+  {
+   "from": "K10.44",
+   "to": "CAM1.H10"
+  },
+  {
+   "from": "CAM1.HH10",
+   "to": "KP.A1"
+  },
+  {
+   "from": "K10.A2",
+   "to": "N1.T"
+  },
+  {
+   "from": "K10.22",
+   "to": "R1.T"
+  },
+  {
+   "from": "K10.A1",
+   "to": "H10.1"
+  },
+  {
+   "from": "H10.2",
+   "to": "N1.T"
+  }
+ ],
+ "demo": [
+  {
+   "caption": "VoltLab \u2014 10-story relay elevator (car at floor 1)"
+  },
+  {
+   "fit": true
+  },
+  {
+   "wait": 2.5
+  },
+  {
+   "wait": 2.5
+  },
+  {
+   "caption": "Passenger at floor 5 registers a call"
+  },
+  {
+   "press": "S5"
+  },
+  {
+   "wait": 1.2
+  },
+  {
+   "release": "S5"
+  },
+  {
+   "caption": "KM_run + KM_up energize \u2014 hoist motor starts upward"
+  },
+  {
+   "wait": 2.5
+  },
+  {
+   "caption": "Car travels: floor 2... 3... 4..."
+  },
+  {
+   "cam": [
+    "CAM1",
+    2
+   ]
+  },
+  {
+   "wait": 1.0
+  },
+  {
+   "cam": [
+    "CAM1",
+    3
+   ]
+  },
+  {
+   "wait": 1.0
+  },
+  {
+   "cam": [
+    "CAM1",
+    4
+   ]
+  },
+  {
+   "wait": 1.0
+  },
+  {
+   "caption": "Arriving at floor 5 \u2014 the cam opens K5's run contact"
+  },
+  {
+   "cam": [
+    "CAM1",
+    5
+   ]
+  },
+  {
+   "wait": 2.5
+  },
+  {
+   "caption": "Served: KM_run drops, call 5 auto-resets"
+  },
+  {
+   "wait": 2.0
+  },
+  {
+   "caption": "New call: floor 9 (car re-dispatches automatically)"
+  },
+  {
+   "press": "S9"
+  },
+  {
+   "wait": 1.0
+  },
+  {
+   "release": "S9"
+  },
+  {
+   "cam": [
+    "CAM1",
+    6
+   ]
+  },
+  {
+   "wait": 0.8
+  },
+  {
+   "cam": [
+    "CAM1",
+    7
+   ]
+  },
+  {
+   "wait": 0.8
+  },
+  {
+   "cam": [
+    "CAM1",
+    8
+   ]
+  },
+  {
+   "wait": 0.8
+  },
+  {
+   "cam": [
+    "CAM1",
+    9
+   ]
+  },
+  {
+   "wait": 2.5
+  },
+  {
+   "caption": "Floor 9 served \u2014 no calls pending, car holds"
+  },
+  {
+   "wait": 2.0
+  },
+  {
+   "caption": "Operator selects DOWN and calls floor 2"
+  },
+  {
+   "toggle": "SelUp"
+  },
+  {
+   "toggle": "SelDn"
+  },
+  {
+   "press": "S2"
+  },
+  {
+   "wait": 1.0
+  },
+  {
+   "release": "S2"
+  },
+  {
+   "cam": [
+    "CAM1",
+    8
+   ]
+  },
+  {
+   "wait": 0.7
+  },
+  {
+   "cam": [
+    "CAM1",
+    7
+   ]
+  },
+  {
+   "wait": 0.7
+  },
+  {
+   "cam": [
+    "CAM1",
+    6
+   ]
+  },
+  {
+   "wait": 0.7
+  },
+  {
+   "cam": [
+    "CAM1",
+    5
+   ]
+  },
+  {
+   "wait": 0.7
+  },
+  {
+   "cam": [
+    "CAM1",
+    4
+   ]
+  },
+  {
+   "wait": 0.7
+  },
+  {
+   "cam": [
+    "CAM1",
+    3
+   ]
+  },
+  {
+   "wait": 0.7
+  },
+  {
+   "cam": [
+    "CAM1",
+    2
+   ]
+  },
+  {
+   "wait": 2.5
+  },
+  {
+   "caption": "Floor 2 served \u2014 end of demo"
+  },
+  {
+   "wait": 2.5
+  },
+  {
+   "fit": true
+  },
+  {
+   "caption": "End of demo"
+  },
+  {
+   "wait": 2.5
+  }
+ ]
+}

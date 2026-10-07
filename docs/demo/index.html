@@ -1,0 +1,186 @@
+<!doctype html>
+<!-- VoltLab live demo — runs the REAL simulation engine (sim/engine.js) entirely
+     client-side. Files in this directory are vendored copies refreshed by
+     scripts/sync_demo.sh — edit the originals, not these. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VoltLab — live demo</title>
+  <link rel="icon" href="icon.svg">
+  <link rel="stylesheet" href="app.css">
+  <style>
+    /* demo chrome only — the schematic itself is styled by app.css */
+    #demo-bar {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 6px 10px;
+      background: var(--panel); border-bottom: 1px solid var(--line);
+      white-space: nowrap; user-select: none;
+    }
+    #demo-bar .brand { font-weight: 700; font-size: 14px; color: var(--accent); }
+    #demo-bar .brand small { color: var(--dim); font-weight: 400; margin-left: 6px; }
+    #demo-bar .spacer { flex: 1; }
+    #demo-hint { color: var(--dim); font-size: 12px; }
+    #statusbar {
+      display: flex; align-items: center; gap: 14px;
+      padding: 3px 12px;
+      border-top: 1px solid var(--line);
+      font: 11px "Consolas", monospace;
+      color: var(--dim); background: var(--panel); user-select: none;
+    }
+    #statusbar #ticker { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #statusbar .spacer { flex: 1; }
+  </style>
+</head>
+<body>
+
+  <header id="demo-bar">
+    <span class="brand">⚡ VoltLab <small>live demo — real engine, in your browser</small></span>
+    <select id="circuit" aria-label="Circuit">
+      <option value="dol-starter">dol-starter</option>
+      <option value="reversing-starter">reversing-starter</option>
+      <option value="timer-sequence">timer-sequence</option>
+      <option value="elevator-2floor">elevator-2floor</option>
+      <option value="elevator-10floor">elevator-10floor</option>
+    </select>
+    <button id="btn-run" class="accent">⏸ Pause</button>
+    <button id="btn-advance" title="Fast-forward 5 sim-seconds">⏩ 5s</button>
+    <button id="btn-reset" title="Reload the circuit">⟲ Reset</button>
+    <span class="spacer"></span>
+    <span id="demo-hint">hold <b>S1</b> to start · click <b>Q1</b> to toggle · click the red <b>RESET</b> when KK1 trips</span>
+    <button id="btn-zoom-out" title="Zoom out">−</button>
+    <button id="btn-fit" title="Fit circuit">Fit</button>
+    <button id="btn-zoom-in" title="Zoom in">+</button>
+  </header>
+
+  <section id="canvas-wrap">
+    <div id="canvas-scale"><svg id="canvas" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="2.6" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+          <circle cx="10" cy="10" r="0.7" class="grid-dot"/>
+        </pattern>
+      </defs>
+      <rect id="grid-rect" x="0" y="0" width="100%" height="100%" fill="url(#grid)"/>
+      <g id="wires-layer"></g>
+      <g id="dots-layer"></g>
+      <g id="comps-layer"></g>
+      <g id="ghost-layer"></g>
+    </svg></div>
+  </section>
+
+  <footer id="statusbar">
+    <span id="st-circuit">—</span>
+    <span id="st-time">t = 0.0 s</span>
+    <span id="st-run">running</span>
+    <span class="spacer"></span>
+    <span id="ticker"></span>
+  </footer>
+
+  <script type="module">
+    import { Engine } from './engine.js';
+    import { renderScene, invalidateRenderCache } from './render.js';
+
+    const svg = document.getElementById('canvas');
+    const wrap = document.getElementById('canvas-wrap');
+    const $ = (sel) => document.querySelector(sel);
+
+    const engine = new Engine();
+    const ui = { zoom: 1 };
+    const rotorAngles = new Map();
+    let lastFrame = performance.now();
+
+    function renderNow() {
+      const snap = engine.snapshot(30);
+      renderScene(svg, snap, ui, rotorAngles);
+      $('#st-circuit').textContent = snap.circuit;
+      $('#st-time').textContent = `t = ${snap.t.toFixed(1)} s`;
+      $('#st-run').textContent = snap.running ? 'running' : 'paused';
+      $('#btn-run').textContent = snap.running ? '⏸ Pause' : '▶ Run';
+      $('#btn-run').classList.toggle('paused', !snap.running);
+      const last = snap.log[snap.log.length - 1];
+      if (last) $('#ticker').textContent = `${last.t.toFixed(1)}s · ${last.msg}`;
+    }
+
+    async function loadCircuit(name) {
+      const res = await fetch(`circuits/${name}.json`);
+      if (!res.ok) throw new Error(`circuit ${name} not found`);
+      engine.loadCircuit(await res.json(), name);
+      engine.running = true;
+      rotorAngles.clear();
+      invalidateRenderCache();
+      ui.zoom = 0.9;
+      renderNow();
+      fit();
+    }
+
+    function contentBox() {
+      const w = Number(svg.getAttribute('data-w')) || 1280;
+      const h = Number(svg.getAttribute('data-h')) || 900;
+      return { w, h };
+    }
+    function fit() {
+      const { w, h } = contentBox();
+      ui.zoom = Math.min((wrap.clientWidth - 24) / w, (wrap.clientHeight - 24) / h);
+      ui.zoom = Math.max(0.15, Math.min(3, ui.zoom));
+      wrap.scrollLeft = 0; wrap.scrollTop = 0;
+      renderNow();
+    }
+    function zoomBy(f) {
+      const { w, h } = contentBox();
+      ui.zoom = Math.max(0.15, Math.min(3, ui.zoom * f));
+      renderNow();
+    }
+
+    // schematic interactions — same attributes the full app uses
+    svg.addEventListener('pointerdown', (e) => {
+      const resetEl = e.target.closest?.('[data-reset]');
+      if (resetEl) { engine.resetOverload(resetEl.dataset.reset); renderNow(); return; }
+      const pressEl = e.target.closest?.('[data-press]');
+      if (pressEl) { engine.pressButton(pressEl.dataset.press, true); renderNow(); }
+    });
+    window.addEventListener('pointerup', (e) => {
+      const pressEl = e.target.closest?.('[data-press]');
+      if (pressEl) { engine.pressButton(pressEl.dataset.press, false); renderNow(); }
+    });
+    svg.addEventListener('click', (e) => {
+      const t = e.target.closest?.('[data-toggle]');
+      if (!t) return;
+      const id = t.dataset.toggle;
+      const c = engine.components.get(id);
+      if (c) engine.setSwitch(id, !(c.state.closed || c.state.pos === '1'));
+      renderNow();
+    });
+
+    $('#circuit').addEventListener('change', (e) => loadCircuit(e.target.value));
+    $('#btn-run').addEventListener('click', () => { engine.running = !engine.running; renderNow(); });
+    $('#btn-advance').addEventListener('click', () => { engine.advance(5); renderNow(); });
+    $('#btn-reset').addEventListener('click', () => loadCircuit($('#circuit').value));
+    $('#btn-fit').addEventListener('click', fit);
+    $('#btn-zoom-in').addEventListener('click', () => zoomBy(1.2));
+    $('#btn-zoom-out').addEventListener('click', () => zoomBy(1 / 1.2));
+
+    // 10 Hz simulation loop + rAF rotor animation (same model as the app)
+    setInterval(() => { if (engine.running) { engine.step(engine.tickRate); renderNow(); } }, 100);
+    function frame(now) {
+      const dt = (now - lastFrame) / 1000;
+      lastFrame = now;
+      let spinning = false;
+      for (const c of engine.components.values()) {
+        if (c.type === 'motor3' && c.state.speed > 0.01) {
+          rotorAngles.set(c.id, ((rotorAngles.get(c.id) || 0) + c.state.speed * dt * 320) % 360);
+          spinning = true;
+        }
+      }
+      if (spinning) renderNow();
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    loadCircuit('dol-starter');
+  </script>
+</body>
+</html>

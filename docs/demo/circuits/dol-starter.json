@@ -1,0 +1,627 @@
+{
+ "name": "dol-starter",
+ "description": "Full DOL (Direct-On-Line) 3-phase motor starter: supply X1 -> breaker Q1 -> fuses F1 -> contactor KM1 (mains + seal-in aux 13-14) -> thermal overload KK1 -> motor M1. Control circuit fused by F4: KK1 NC 95-96 -> STOP S0 (NC) -> START S1 (NO) parallel KM1 aux 13-14 -> coil A1-A2 -> N. Lamps: H1 control power, H2 run (across coil), H3 trip (via KK1 NO 97-98).",
+ "components": [
+  {
+   "id": "X1",
+   "type": "supply3",
+   "label": "X1",
+   "x": 40,
+   "y": 40
+  },
+  {
+   "id": "Q1",
+   "type": "breaker3",
+   "label": "Q1",
+   "x": 180,
+   "y": 160,
+   "state": {
+    "closed": true
+   }
+  },
+  {
+   "id": "F1",
+   "type": "fuse3",
+   "label": "F1",
+   "x": 320,
+   "y": 320
+  },
+  {
+   "id": "KM1",
+   "type": "contactor",
+   "label": "KM1",
+   "x": 460,
+   "y": 460
+  },
+  {
+   "id": "KK1",
+   "type": "overload",
+   "label": "KK1",
+   "x": 640,
+   "y": 700,
+   "params": {
+    "flc": 10,
+    "trip_class": 10
+   }
+  },
+  {
+   "id": "M1",
+   "type": "motor3",
+   "label": "M1",
+   "x": 640,
+   "y": 900,
+   "params": {
+    "flc": 10,
+    "load": 0.9
+   }
+  },
+  {
+   "id": "F4",
+   "type": "fuse1",
+   "label": "F4",
+   "x": 900,
+   "y": 320
+  },
+  {
+   "id": "H1",
+   "type": "lamp",
+   "label": "H1 Power",
+   "x": 1080,
+   "y": 460,
+   "params": {
+    "color": "#f5d76e"
+   }
+  },
+  {
+   "id": "H3",
+   "type": "lamp",
+   "label": "H3 Trip",
+   "x": 1080,
+   "y": 600,
+   "params": {
+    "color": "#e3342f"
+   }
+  },
+  {
+   "id": "H2",
+   "type": "lamp",
+   "label": "H2 Run",
+   "x": 1080,
+   "y": 830,
+   "params": {
+    "color": "#38c172"
+   }
+  },
+  {
+   "id": "S0",
+   "type": "pushbutton_nc",
+   "label": "S0 Stop",
+   "x": 810,
+   "y": 700
+  },
+  {
+   "id": "S1",
+   "type": "pushbutton_no",
+   "label": "S1 Start",
+   "x": 810,
+   "y": 830
+  },
+  {
+   "id": "N1",
+   "type": "junction",
+   "label": "N",
+   "x": 1300,
+   "y": 1140
+  }
+ ],
+ "wires": [
+  {
+   "from": "X1.L1",
+   "to": "Q1.L1",
+   "waypoints": [
+    [
+     60,
+     124
+    ],
+    [
+     200,
+     124
+    ]
+   ]
+  },
+  {
+   "from": "X1.L2",
+   "to": "Q1.L2",
+   "waypoints": [
+    [
+     90,
+     132
+    ],
+    [
+     230,
+     132
+    ]
+   ]
+  },
+  {
+   "from": "X1.L3",
+   "to": "Q1.L3",
+   "waypoints": [
+    [
+     120,
+     140
+    ],
+    [
+     260,
+     140
+    ]
+   ]
+  },
+  {
+   "from": "Q1.T1",
+   "to": "F1.L1",
+   "waypoints": [
+    [
+     200,
+     292
+    ],
+    [
+     340,
+     292
+    ]
+   ]
+  },
+  {
+   "from": "Q1.T2",
+   "to": "F1.L2",
+   "waypoints": [
+    [
+     230,
+     300
+    ],
+    [
+     370,
+     300
+    ]
+   ]
+  },
+  {
+   "from": "Q1.T3",
+   "to": "F1.L3",
+   "waypoints": [
+    [
+     260,
+     308
+    ],
+    [
+     400,
+     308
+    ]
+   ]
+  },
+  {
+   "from": "F1.T1",
+   "to": "KM1.L1",
+   "waypoints": [
+    [
+     340,
+     434
+    ],
+    [
+     480,
+     434
+    ]
+   ]
+  },
+  {
+   "from": "F1.T2",
+   "to": "KM1.L2",
+   "waypoints": [
+    [
+     370,
+     442
+    ],
+    [
+     510,
+     442
+    ]
+   ]
+  },
+  {
+   "from": "F1.T3",
+   "to": "KM1.L3",
+   "waypoints": [
+    [
+     400,
+     450
+    ],
+    [
+     540,
+     450
+    ]
+   ]
+  },
+  {
+   "from": "F1.T1",
+   "to": "F4.L",
+   "waypoints": [
+    [
+     340,
+     458
+    ],
+    [
+     960,
+     458
+    ],
+    [
+     960,
+     290
+    ],
+    [
+     920,
+     290
+    ]
+   ]
+  },
+  {
+   "from": "F1.T1",
+   "to": "H1.1",
+   "waypoints": [
+    [
+     340,
+     426
+    ],
+    [
+     1105,
+     426
+    ]
+   ]
+  },
+  {
+   "from": "KM1.T1",
+   "to": "KK1.L1",
+   "waypoints": [
+    [
+     480,
+     645
+    ],
+    [
+     660,
+     645
+    ]
+   ]
+  },
+  {
+   "from": "KM1.T2",
+   "to": "KK1.L2",
+   "waypoints": [
+    [
+     510,
+     653
+    ],
+    [
+     690,
+     653
+    ]
+   ]
+  },
+  {
+   "from": "KM1.T3",
+   "to": "KK1.L3",
+   "waypoints": [
+    [
+     540,
+     661
+    ],
+    [
+     720,
+     661
+    ]
+   ]
+  },
+  {
+   "from": "KK1.T1",
+   "to": "M1.U"
+  },
+  {
+   "from": "KK1.T2",
+   "to": "M1.V"
+  },
+  {
+   "from": "KK1.T3",
+   "to": "M1.W"
+  },
+  {
+   "from": "F4.T",
+   "to": "KK1.95",
+   "waypoints": [
+    [
+     920,
+     430
+    ],
+    [
+     870,
+     430
+    ],
+    [
+     870,
+     690
+    ],
+    [
+     765,
+     690
+    ]
+   ]
+  },
+  {
+   "from": "KK1.96",
+   "to": "S0.11",
+   "waypoints": [
+    [
+     815,
+     710
+    ],
+    [
+     840,
+     710
+    ]
+   ]
+  },
+  {
+   "from": "S0.12",
+   "to": "S1.13"
+  },
+  {
+   "from": "S0.12",
+   "to": "KM1.13",
+   "waypoints": [
+    [
+     880,
+     780
+    ],
+    [
+     880,
+     410
+    ],
+    [
+     570,
+     410
+    ],
+    [
+     570,
+     480
+    ]
+   ]
+  },
+  {
+   "from": "KM1.14",
+   "to": "S1.14",
+   "waypoints": [
+    [
+     665,
+     480
+    ],
+    [
+     665,
+     930
+    ],
+    [
+     840,
+     930
+    ]
+   ]
+  },
+  {
+   "from": "S1.14",
+   "to": "KM1.A1",
+   "waypoints": [
+    [
+     790,
+     910
+    ],
+    [
+     790,
+     570
+    ]
+   ]
+  },
+  {
+   "from": "KM1.A1",
+   "to": "H2.1",
+   "waypoints": [
+    [
+     595,
+     530
+    ],
+    [
+     650,
+     530
+    ],
+    [
+     650,
+     800
+    ],
+    [
+     1105,
+     800
+    ]
+   ]
+  },
+  {
+   "from": "KM1.A2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     640,
+     650
+    ],
+    [
+     640,
+     735
+    ],
+    [
+     1310,
+     735
+    ]
+   ]
+  },
+  {
+   "from": "F4.T",
+   "to": "KK1.97",
+   "waypoints": [
+    [
+     890,
+     390
+    ],
+    [
+     890,
+     600
+    ],
+    [
+     740,
+     600
+    ],
+    [
+     740,
+     750
+    ]
+   ]
+  },
+  {
+   "from": "KK1.98",
+   "to": "H3.1",
+   "waypoints": [
+    [
+     860,
+     750
+    ],
+    [
+     860,
+     560
+    ],
+    [
+     1105,
+     560
+    ]
+   ]
+  },
+  {
+   "from": "H3.2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     1180,
+     680
+    ],
+    [
+     1180,
+     1165
+    ],
+    [
+     1310,
+     1165
+    ]
+   ]
+  },
+  {
+   "from": "H1.2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     1160,
+     540
+    ],
+    [
+     1160,
+     1135
+    ],
+    [
+     1310,
+     1135
+    ]
+   ]
+  },
+  {
+   "from": "H2.2",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     1140,
+     910
+    ],
+    [
+     1140,
+     1150
+    ],
+    [
+     1310,
+     1150
+    ]
+   ]
+  },
+  {
+   "from": "X1.N",
+   "to": "N1.T",
+   "waypoints": [
+    [
+     150,
+     1200
+    ],
+    [
+     1310,
+     1200
+    ]
+   ]
+  }
+ ],
+ "demo": [
+  {
+   "caption": "VoltLab \u2014 DOL starter: H1 shows control power"
+  },
+  {
+   "wait": 2.5
+  },
+  {
+   "caption": "Press START (S1) \u2014 contactor picks up"
+  },
+  {
+   "press": "S1"
+  },
+  {
+   "wait": 1.5
+  },
+  {
+   "release": "S1"
+  },
+  {
+   "caption": "Seal-in aux holds the contactor \u2014 motor spins up"
+  },
+  {
+   "wait": 3.5
+  },
+  {
+   "caption": "Press STOP (S0) \u2014 contactor drops, motor coasts"
+  },
+  {
+   "press": "S0"
+  },
+  {
+   "wait": 1.2
+  },
+  {
+   "release": "S0"
+  },
+  {
+   "wait": 3
+  },
+  {
+   "caption": "Stall the motor and restart \u2014 watch the thermal overload"
+  },
+  {
+   "fit": true
+  },
+  {
+   "wait": 0.2
+  }
+ ]
+}
