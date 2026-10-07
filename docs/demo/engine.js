@@ -446,6 +446,7 @@ export class Engine {
           const powered = anyHot && distinct3(pU, pV, pW);
           c._internal.powered = powered;
           c._internal.anyHot = anyHot;
+          c._internal.seq = powered ? sequenceDir(pU, pV, pW) : { dir: 0, order: '' };
           break;
         }
         case 'overload': {
@@ -507,32 +508,60 @@ export class Engine {
         const jam = this.faults.stall?.target === c.id;
         if (this.faults.overload?.target === c.id) load *= this.faults.overload.multiplier;
         const powered = c._internal.powered, anyHot = c._internal.anyHot;
-        const speed = c.state.speed || 0;
+        const seq = c._internal.seq || { dir: 0, order: '' };
+        const speed = c.state.speed || 0; // signed: + forward, − reverse
+        const mag = Math.abs(speed);
+        const decay = (rate) => { // decay magnitude toward 0, keep sign; rate clamped for big dt
+          const m = mag * (1 - Math.min(1, rate));
+          return speed < 0 ? -m : m;
+        };
+        c.state.dir = powered ? seq.dir : 0;
 
         if (powered) {
           if (jam) {
             c.state.current = 6 * flc;
-            c.state.speed = Math.max(0, speed - dt / 0.3 * speed);
+            c.state.speed = decay(dt / 0.3);
+          } else if (seq.dir === 0) {
+            // terminals hot but no rotating field (miswire): motor hums, speed bleeds off
+            c.state.current = flc * load * 6;
+            c.state.speed = decay(dt / 0.5);
           } else {
-            const inrush = 1 + 5 * Math.max(0, 1 - speed / 0.3); // 6x at standstill → 1x above 0.3
-            c.state.current = flc * load * inrush;
-            c.state.speed = Math.min(1, speed + (dt / 1.2) * (1 - speed));
+            const dir = seq.dir;
+            // plugging: rotor still turning against the applied sequence —
+            // counter-torque brakes it through zero, then it spins up reversed
+            const plugging = speed * dir < -0.02;
+            if (plugging) {
+              c.state.current = 2 * flc * load;
+              c.state.speed = speed + (dt / 0.6) * (dir - speed);
+            } else {
+              const inrush = 1 + 5 * Math.max(0, 1 - mag / 0.3); // 6x at standstill → 1x above 0.3
+              c.state.current = flc * load * inrush;
+              c.state.speed = speed + (dt / 1.2) * (dir - speed);
+            }
           }
         } else if (anyHot) { // single-phasing
-          c.state.current = flc * load * (speed > 0.2 ? 1.7 : 6);
-          c.state.speed = Math.max(0, speed - (dt / 2.5) * speed);
+          c.state.current = flc * load * (mag > 0.2 ? 1.7 : 6);
+          c.state.speed = decay(dt / 2.5);
         } else {
           c.state.current = 0;
-          c.state.speed = Math.max(0, speed - (dt / 2) * speed);
+          c.state.speed = decay(dt / 2);
         }
+        c.state.speed = Math.max(-1, Math.min(1, c.state.speed));
 
         const wasRunning = c._internal.running;
-        const running = powered && c.state.speed > 0.03;
+        const running = powered && Math.abs(c.state.speed) > 0.03;
         if (running !== wasRunning) {
           c._internal.running = running;
           this.log(`${c.label} ${running ? 'STARTED — spinning up' : 'STOPPED'}`, running ? 'info' : 'warn');
         }
-        if (jam && powered && c.state.speed < 0.02 && !c._internal.stallLogged) {
+        if (powered && seq.dir !== 0) {
+          if (c._internal.lastDir === undefined) c._internal.lastDir = seq.dir;
+          else if (c._internal.lastDir !== seq.dir) {
+            c._internal.lastDir = seq.dir;
+            this.log(`${c.label} REVERSED — phase order ${seq.order}`, 'warn');
+          }
+        }
+        if (jam && powered && Math.abs(c.state.speed) < 0.02 && !c._internal.stallLogged) {
           c._internal.stallLogged = true;
           this.log(`${c.label} STALLED — locked rotor, ${Math.round(6 * flc)} A`, 'fault');
         }
@@ -654,6 +683,20 @@ function distinct3(a, b, c) {
   for (const p of a) if (b.has(p) || c.has(p)) return false;
   for (const p of b) if (c.has(p)) return false;
   return true;
+}
+
+// Rotation direction from the phase sequence across motor terminals U,V,W:
+// +1 when the phases appear in the L1→L2→L3 cyclic order (or a rotation of it),
+// -1 when two phases are swapped. Returns 0 when no clean 3-phase combo exists.
+function sequenceDir(pU, pV, pW) {
+  const IDX = { L1: 0, L2: 1, L3: 2 };
+  for (const a of pU) for (const b of pV) for (const c of pW) {
+    if (!(a in IDX) || !(b in IDX) || !(c in IDX)) continue;
+    if (a === b || b === c || a === c) continue;
+    const fwd = (((IDX[b] - IDX[a]) % 3) + 3) % 3 === 1;
+    return { dir: fwd ? 1 : -1, order: `${a}-${b}-${c}` };
+  }
+  return { dir: 0, order: '' };
 }
 
 // Conducting pole pairs per device, based on current device state.

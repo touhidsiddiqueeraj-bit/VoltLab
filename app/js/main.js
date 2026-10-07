@@ -130,7 +130,8 @@ function frame(now) {
   if (ui.snapshot) {
     let spinning = false;
     for (const c of ui.snapshot.components) {
-      if (c.type === 'motor3' && c.state.speed > 0.01) {
+      if (c.type === 'motor3' && Math.abs(c.state.speed) > 0.01) {
+        // signed speed — negative = reverse, so the rotor visibly spins both ways
         rotorAngles.set(c.id, ((rotorAngles.get(c.id) || 0) + c.state.speed * dt * 320) % 360);
         spinning = true;
       }
@@ -180,6 +181,7 @@ function renderInspector() {
     let val = typeof v === 'boolean' ? (v ? 'true' : 'false') : String(v);
     if (k === 'tripped' && v) cls = 'fault';
     if (k === 'blown' && Array.isArray(v) && v.some(x => x)) cls = 'fault';
+    if (k === 'dir' && c.type === 'motor3') val = v > 0 ? 'forward' : v < 0 ? 'reverse' : '—';
     return `<span class="k">${k}</span><span class="v ${cls}">${escapeHtml(val)}</span>`;
   }).join('');
   const params = Object.entries(spec.params || {}).map(([k, p]) =>

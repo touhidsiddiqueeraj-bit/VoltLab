@@ -4,6 +4,20 @@ All notable changes to VoltLab are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- **Motor direction was invisible.** The engine treated motor speed as a plain magnitude
+  (0..1), so the rotor animation could only ever spin one way — a reversing starter
+  swapped phases electrically but the motor never appeared to slow down, stop, or turn
+  the opposite way. The engine now derives rotation direction from the phase sequence
+  across the motor's U-V-W terminals (`state.dir`: +1 forward, −1 reverse, 0 off) and
+  keeps `state.speed` signed. Applying the opposite sequence to a spinning rotor plugs
+  it: counter-torque brakes through zero at ~2× load current, then it spins up reversed.
+  The rotor animation and inspector render the signed speed/direction, and the event log
+  records `REVERSED — phase order Lx-Ly-Lz` on a direction change.
+
 ## [1.0.0] — 2026-10-07
 
 First public release.

@@ -170,7 +170,7 @@
       lastFrame = now;
       let spinning = false;
       for (const c of engine.components.values()) {
-        if (c.type === 'motor3' && c.state.speed > 0.01) {
+        if (c.type === 'motor3' && Math.abs(c.state.speed) > 0.01) {
           rotorAngles.set(c.id, ((rotorAngles.get(c.id) || 0) + c.state.speed * dt * 320) % 360);
           spinning = true;
         }

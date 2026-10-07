@@ -153,7 +153,7 @@ export const SYMBOLS = {
 
   motor3(comp, state) {
     const { x, y } = comp;
-    const powered = state.speed > 0.02;
+    const powered = Math.abs(state.speed) > 0.02;
     let s = '';
     for (const px of [20, 50, 80]) s += stub(x + px, y, x + px, y + 47);
     s += `<circle cx="${x + 50}" cy="${y + 85}" r="38" class="s-body" style="stroke: ${powered ? 'var(--ok)' : 'var(--sym-idle)'}" stroke-width="2.2" ${powered ? 'filter="url(#glow)"' : ''}/>`;

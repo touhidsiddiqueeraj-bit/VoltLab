@@ -102,7 +102,7 @@ export const DEVICE_TYPES = {
     label: 'Motor 3~',
     group: 'Loads',
     defaults: { label: 'M1' },
-    state: { speed: 0, current: 0 },
+    state: { speed: 0, current: 0, dir: 0 },
     size: { w: 110, h: 130 },
     terminals: { U: { x: 20, y: 0 }, V: { x: 50, y: 0 }, W: { x: 80, y: 0 } },
     params: {

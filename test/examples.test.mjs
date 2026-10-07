@@ -154,6 +154,7 @@ test('reversing: forward runs, reverse is interlocked, swap after stop', () => {
   e.pressButton('S1', false);
   e.advance(2);
   assert.ok(st(e, 'M1').speed > 0.6, 'motor running forward');
+  assert.equal(st(e, 'M1').dir, 1, 'forward phase sequence drives +speed');
   assert.equal(st(e, 'H1').lit, true);
 
   e.pressButton('S2'); // press reverse while running forward
@@ -162,19 +163,36 @@ test('reversing: forward runs, reverse is interlocked, swap after stop', () => {
   assert.equal(st(e, 'KM1').energized, true, 'forward unaffected');
   e.pressButton('S2', false);
 
-  e.pressButton('S0'); // stop
+  e.pressButton('S0'); // stop — KM1 drops while the rotor is still fast
   e.step(0.3);
   assert.equal(st(e, 'KM1').energized, false);
+  e.pressButton('S0', false);
+  e.advance(1.5);
+  assert.ok(st(e, 'M1').speed > 0.2, `rotor still coasting forward (speed ${st(e, 'M1').speed.toFixed(2)})`);
+
+  e.pressButton('S2'); // plug reverse into the spinning motor
+  e.step(0.2);
+  assert.equal(st(e, 'KM2').energized, true, 'reverse picks up against a spinning rotor');
+  e.pressButton('S2', false);
+  e.advance(2.5); // counter-torque brakes through zero, then spins up the other way
+  const plugged = st(e, 'M1');
+  assert.ok(plugged.speed < -0.3, `plugged through zero into reverse (speed ${plugged.speed.toFixed(2)})`);
+  assert.equal(plugged.dir, -1, 'reverse phase sequence drives −speed');
+  assert.ok(e.events.some(l => l.msg.includes('REVERSED')), 'REVERSED event logged');
+
+  e.pressButton('S0'); // stop again, coast fully
+  e.step(0.3);
   e.pressButton('S0', false);
   e.advance(6);
   assert.ok(st(e, 'M1').speed < 0.06);
 
-  e.pressButton('S2'); // now reverse
+  e.pressButton('S2'); // now reverse from standstill
   e.step(0.2);
   assert.equal(st(e, 'KM2').energized, true, 'reverse picks up after stop');
   e.pressButton('S2', false);
   e.advance(2);
   assert.equal(st(e, 'H2').lit, true, 'reverse lamp lit');
+  assert.ok(st(e, 'M1').speed < -0.6, 'motor spinning in reverse');
   e.pressButton('S1'); // forward must now be blocked
   e.step(0.3);
   assert.equal(st(e, 'KM1').energized, false, 'forward blocked by reverse interlock');

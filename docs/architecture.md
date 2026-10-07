@@ -50,9 +50,11 @@ The engine is a **discrete-time electrical solver**, not an animation loop:
    S5 → K5 picks up (tick 1) → KP dispatch contact closes (tick 2) → KM_run picks up
    (tick 3). Tests must `advance()` past pick-up and dwell delays before asserting.
 4. **Thermal & dynamics** run on top of the electrical layer:
-   - motor: ~6× FLC inrush at standstill, current decays to load current as speed rises,
-     coast-down when de-energized, **stops on phase loss** with the remaining phases
-     overcurrented (single-phasing);
+   - motor: rotation direction is derived from the phase sequence across U-V-W
+     (signed speed: + forward, − reverse), ~6× FLC inrush at standstill, current decays
+     to load current as speed rises, coast-down when de-energized, plugging (reverse
+     sequence applied to a spinning rotor) brakes through zero at 2× load current, and
+     **stops on phase loss** with the remaining phases overcurrented (single-phasing);
    - thermal overload: integrates i²-style heating against its FLC setpoint, trips at
      100 % (class 10: ~10 s at 7.2× setpoint; a locked rotor trips in ~14.5 s at a 10 A
      setpoint), NC 95-96 drops the coil circuit, NO 97-98 lights the trip lamp, manual
