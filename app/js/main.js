@@ -83,6 +83,7 @@ function connect() {
 }
 
 function updateStatus(s) {
+  updateMimic(s);
   $('#st-circuit').textContent = s.circuit;
   const sel = $('#circuit-select');
   if (s.circuit && sel.value !== s.circuit && [...sel.options].some(o => o.value === s.circuit)) sel.value = s.circuit;
@@ -94,6 +95,100 @@ function updateStatus(s) {
   const faults = Object.keys(s.faults || {});
   $('#st-faults').textContent = faults.length ? `FAULTS: ${faults.join(', ')}` : '';
 }
+
+// ---------- operator panel: round mimic buttons + motor rotation display ----------
+// Rebuilt only when the circuit's button/motor set changes (signature check), so the
+// press targets are stable across the 10 Hz status updates.
+let mimicSig = null;
+let mimicHeld = null;
+const mimicStallSince = new Map();
+
+function mimicRole(c) {
+  const rest = c.label.startsWith(c.id) ? c.label.slice(c.id.length).trim() : c.label;
+  return rest || (c.type === 'pushbutton_nc' ? 'NC contact' : 'NO contact');
+}
+
+function updateMimic(s) {
+  const rel = s.components.filter(c =>
+    c.type === 'pushbutton_no' || c.type === 'pushbutton_nc' || c.type === 'motor3');
+  const sig = rel.map(c => `${c.id}:${c.type}:${c.label}`).join('|');
+  if (sig !== mimicSig) {
+    mimicSig = sig;
+    const btns = rel.filter(c => c.type !== 'motor3');
+    const motors = rel.filter(c => c.type === 'motor3');
+    $('#mimic-buttons').innerHTML = btns.map(c => `
+      <div class="mimic-btn-wrap">
+        <button class="mimic-btn ${c.type === 'pushbutton_nc' ? 'nc' : 'no'}" data-mimic="${c.id}"
+                aria-label="hold ${escapeHtml(c.label)}"><span>${c.id}</span></button>
+        <span class="mimic-cap" title="${escapeHtml(c.label)}">${escapeHtml(mimicRole(c))}</span>
+      </div>`).join('') || '<span class="mimic-empty">no push buttons</span>';
+    $('#mimic-motors').innerHTML = motors.map(c => `
+      <div class="mimic-motor" data-mmotor="${c.id}">
+        <span class="mimic-disc"><span class="rotor"><i></i></span></span>
+        <span class="mimic-mot-meta">
+          <span class="mimic-mot-id">${escapeHtml(c.id)}</span>
+          <span class="mimic-mot-state">stopped</span>
+        </span>
+      </div>`).join('') || '<span class="mimic-empty">no motors</span>';
+    $('#mimic-panel').hidden = rel.length === 0;
+  }
+
+  for (const c of s.components) {
+    if (c.type === 'pushbutton_no' || c.type === 'pushbutton_nc') {
+      const el = document.querySelector(`[data-mimic="${c.id}"]`);
+      if (el) el.classList.toggle('pressed', !!c.state.pressed);
+    } else if (c.type === 'motor3') {
+      const wrap = document.querySelector(`[data-mmotor="${c.id}"]`);
+      if (!wrap) continue;
+      const disc = wrap.querySelector('.mimic-disc');
+      const rotor = disc.querySelector('.rotor');
+      const stateEl = wrap.querySelector('.mimic-mot-state');
+      const sp = c.state.speed || 0;
+      const flc = c.params.flc || 10;
+      // a jammed rotor sits at ~6x FLC while still powered; a normal start passes
+      // that only for ~0.1 s, so require the condition to persist before alarming
+      const stallCond = !!c.state.dir && Math.abs(sp) < 0.05 && Math.abs(c.state.current || 0) >= 5 * flc;
+      if (!stallCond) mimicStallSince.delete(c.id);
+      else if (!mimicStallSince.has(c.id)) mimicStallSince.set(c.id, performance.now());
+      const stalled = stallCond && performance.now() - mimicStallSince.get(c.id) > 800;
+
+      let cls = '', txt;
+      if (stalled) { cls = 'stall'; txt = 'stalled'; }
+      else if (Math.abs(sp) <= 0.01) { txt = 'stopped'; }
+      else if (!c.state.dir) { cls = 'coast'; txt = 'coasting'; }
+      else { cls = 'run'; txt = sp > 0 ? 'clockwise' : 'counter-clockwise'; }
+
+      disc.className = `mimic-disc ${cls}`;
+      if (cls === 'run' || cls === 'coast') {
+        rotor.style.animationPlayState = 'running';
+        rotor.style.animationDuration = `${Math.max(0.28, 1.4 / Math.abs(sp)).toFixed(2)}s`;
+        rotor.style.animationDirection = sp < 0 ? 'reverse' : 'normal';
+      } else {
+        rotor.style.animationPlayState = 'paused';
+      }
+      stateEl.className = `mimic-mot-state ${cls}`;
+      stateEl.textContent = Math.abs(sp) > 0.01 ? `${txt} · ${Math.round(Math.abs(sp) * 100)} %` : txt;
+    }
+  }
+}
+
+// panel buttons behave like the physical ones: hold to press, release anywhere
+$('#mimic-panel').addEventListener('pointerdown', (e) => {
+  const btn = e.target.closest?.('[data-mimic]');
+  if (!btn) return;
+  e.preventDefault();
+  mimicHeld = btn.dataset.mimic;
+  cmd('press_button', { id: mimicHeld });
+});
+const releaseMimicHeld = () => {
+  if (!mimicHeld) return;
+  const id = mimicHeld;
+  mimicHeld = null;
+  // keep the press alive across at least one sim tick, like canvas presses
+  setTimeout(() => cmd('release_button', { id }), 120);
+};
+window.addEventListener('pointerup', releaseMimicHeld);
+window.addEventListener('pointercancel', releaseMimicHeld);
 
 function renderLog(s) {
   const last = s.log[s.log.length - 1];

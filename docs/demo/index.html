@@ -72,6 +72,17 @@
     </svg></div>
   </section>
 
+  <div id="mimic-panel" hidden>
+    <div class="mimic-group">
+      <h3>Controls</h3>
+      <div id="mimic-buttons" class="mimic-btns"></div>
+    </div>
+    <div class="mimic-group">
+      <h3>Motors</h3>
+      <div id="mimic-motors" class="mimic-motlist"></div>
+    </div>
+  </div>
+
   <footer id="statusbar">
     <span id="st-circuit">—</span>
     <span id="st-time">t = 0.0 s</span>
@@ -103,7 +114,83 @@
       $('#btn-run').classList.toggle('paused', !snap.running);
       const last = snap.log[snap.log.length - 1];
       if (last) $('#ticker').textContent = `${last.t.toFixed(1)}s · ${last.msg}`;
+      updateMimic();
     }
+
+    // ---------- operator panel: round mimic buttons + motor rotation display ----------
+    // Same UI as the full app; driven straight off the local engine.
+    const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    let mimicSig = null, mimicHeld = null;
+    function updateMimic() {
+      const rel = [...engine.components.values()].filter(c =>
+        c.type === 'pushbutton_no' || c.type === 'pushbutton_nc' || c.type === 'motor3');
+      const sig = rel.map(c => `${c.id}:${c.type}:${c.label}`).join('|');
+      if (sig !== mimicSig) {
+        mimicSig = sig;
+        const btns = rel.filter(c => c.type !== 'motor3');
+        const motors = rel.filter(c => c.type === 'motor3');
+        $('#mimic-buttons').innerHTML = btns.map(c => {
+          const rest = c.label.startsWith(c.id) ? c.label.slice(c.id.length).trim() : c.label;
+          return `<div class="mimic-btn-wrap">
+            <button class="mimic-btn ${c.type === 'pushbutton_nc' ? 'nc' : 'no'}" data-mimic="${esc(c.id)}"
+                    aria-label="hold ${esc(c.label)}"><span>${esc(c.id)}</span></button>
+            <span class="mimic-cap">${esc(rest || (c.type === 'pushbutton_nc' ? 'NC contact' : 'NO contact'))}</span>
+          </div>`;
+        }).join('') || '<span class="mimic-empty">no push buttons</span>';
+        $('#mimic-motors').innerHTML = motors.map(c => `
+          <div class="mimic-motor" data-mmotor="${esc(c.id)}">
+            <span class="mimic-disc"><span class="rotor"><i></i></span></span>
+            <span class="mimic-mot-meta">
+              <span class="mimic-mot-id">${esc(c.id)}</span>
+              <span class="mimic-mot-state">stopped</span>
+            </span>
+          </div>`).join('') || '<span class="mimic-empty">no motors</span>';
+        $('#mimic-panel').hidden = rel.length === 0;
+      }
+      for (const c of engine.components.values()) {
+        if (c.type === 'pushbutton_no' || c.type === 'pushbutton_nc') {
+          const el = document.querySelector(`[data-mimic="${c.id}"]`);
+          if (el) el.classList.toggle('pressed', !!c.state.pressed);
+        } else if (c.type === 'motor3') {
+          const wrap = document.querySelector(`[data-mmotor="${c.id}"]`);
+          if (!wrap) continue;
+          const disc = wrap.querySelector('.mimic-disc');
+          const rotor = disc.querySelector('.rotor');
+          const stateEl = wrap.querySelector('.mimic-mot-state');
+          const sp = c.state.speed || 0;
+          let cls = '', txt;
+          if (Math.abs(sp) <= 0.01) txt = 'stopped';
+          else if (!c.state.dir) { cls = 'coast'; txt = 'coasting'; }
+          else { cls = 'run'; txt = sp > 0 ? 'clockwise' : 'counter-clockwise'; }
+          disc.className = `mimic-disc ${cls}`;
+          if (cls === 'run' || cls === 'coast') {
+            rotor.style.animationPlayState = 'running';
+            rotor.style.animationDuration = `${Math.max(0.28, 1.4 / Math.abs(sp)).toFixed(2)}s`;
+            rotor.style.animationDirection = sp < 0 ? 'reverse' : 'normal';
+          } else {
+            rotor.style.animationPlayState = 'paused';
+          }
+          stateEl.className = `mimic-mot-state ${cls}`;
+          stateEl.textContent = Math.abs(sp) > 0.01 ? `${txt} · ${Math.round(Math.abs(sp) * 100)} %` : txt;
+        }
+      }
+    }
+    $('#mimic-panel').addEventListener('pointerdown', (e) => {
+      const btn = e.target.closest?.('[data-mimic]');
+      if (!btn) return;
+      e.preventDefault();
+      mimicHeld = btn.dataset.mimic;
+      engine.pressButton(mimicHeld, true);
+      renderNow();
+    });
+    const releaseMimicHeld = () => {
+      if (!mimicHeld) return;
+      const id = mimicHeld;
+      mimicHeld = null;
+      setTimeout(() => { engine.pressButton(id, false); renderNow(); }, 120);
+    };
+    window.addEventListener('pointerup', releaseMimicHeld);
+    window.addEventListener('pointercancel', releaseMimicHeld);
 
     async function loadCircuit(name) {
       const res = await fetch(`circuits/${name}.json`);
