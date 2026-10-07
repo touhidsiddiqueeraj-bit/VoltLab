@@ -1,0 +1,24 @@
+# --- never commit: third-party Windows installers that ship in this folder ---
+*.msi
+*.exe
+*.Exe
+*.EXE
+Setup.Ini
+
+# --- build / output artifacts ---
+node_modules/
+dist/
+out/
+exports/
+.video_agent/
+
+# --- environment / OS noise ---
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+
+# --- local editor state ---
+.vscode/
+.idea/
+*.swp

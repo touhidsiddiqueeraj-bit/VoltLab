@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # the simulator, server and MCP bridge are stdlib-only; installing
+      # devDependencies (electron) is unnecessary for the test suite
+      - name: Run test suite
+        run: node --test
+
+      - name: MCP end-to-end (real host + real stdio bridge)
+        run: node test/mcp.e2e.mjs
