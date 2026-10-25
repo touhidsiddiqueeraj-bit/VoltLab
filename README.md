@@ -111,7 +111,7 @@ exercises per circuit live in [`docs/examples.md`](docs/examples.md).
 ![The 10-story relay elevator circuit](docs/media/elevator-10floor.png)
 
 *The 10-story elevator — the dispatch bank: run contactor, thermal overload, up/down
-contactors and the 3-deck floor cam.*
+contactors and the 4-deck floor cam.*
 
 ![Elevator contactor bank detail](docs/media/elevator-detail.png)
 

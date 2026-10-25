@@ -42,12 +42,14 @@
       <option value="timer-sequence">timer-sequence</option>
       <option value="elevator-2floor">elevator-2floor</option>
       <option value="elevator-10floor">elevator-10floor</option>
+      <option value="vehicle-drive">vehicle-drive</option>
+      <option value="elevator-cop">elevator-cop</option>
     </select>
     <button id="btn-run" class="accent">⏸ Pause</button>
     <button id="btn-advance" title="Fast-forward 5 sim-seconds">⏩ 5s</button>
     <button id="btn-reset" title="Reload the circuit">⟲ Reset</button>
     <span class="spacer"></span>
-    <span id="demo-hint">hold <b>S1</b> to start · click <b>Q1</b> to toggle · click the red <b>RESET</b> when KK1 trips</span>
+    <span id="demo-hint">hold <b>S1</b> to start · click <b>Q1</b> to toggle · v1.3: <b>vehicle-drive</b> — drag the pedal, slam the e-stop · <b>elevator-cop</b> — call a floor</span>
     <button id="btn-zoom-out" title="Zoom out">−</button>
     <button id="btn-fit" title="Fit circuit">Fit</button>
     <button id="btn-zoom-in" title="Zoom in">+</button>
@@ -76,6 +78,22 @@
     <div class="mimic-group">
       <h3>Controls</h3>
       <div id="mimic-buttons" class="mimic-btns"></div>
+    </div>
+    <div class="mimic-group" id="mg-estop" hidden>
+      <h3>E-Stop</h3>
+      <div id="mimic-estops" class="mimic-btns"></div>
+    </div>
+    <div class="mimic-group" id="mg-pedals" hidden>
+      <h3>Pedals</h3>
+      <div id="mimic-pedals" class="mimic-pedals"></div>
+    </div>
+    <div class="mimic-group" id="mg-elevator" hidden>
+      <h3>Car</h3>
+      <div id="mimic-elevator" class="mimic-elevator"></div>
+    </div>
+    <div class="mimic-group" id="mg-drives" hidden>
+      <h3>Drives</h3>
+      <div id="mimic-drives" class="mimic-motlist"></div>
     </div>
     <div class="mimic-group">
       <h3>Motors</h3>
@@ -117,18 +135,25 @@
       updateMimic();
     }
 
-    // ---------- operator panel: round mimic buttons + motor rotation display ----------
-    // Same UI as the full app; driven straight off the local engine.
+    // ---------- operator console: buttons, e-stop, pedals, car panel, drives, motors ----------
+    // Same device-driven console as the full app, wired straight to the local engine.
     const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
     let mimicSig = null, mimicHeld = null;
+    let pedalDragging = null;              // { id, track, value } while a pedal is dragged
+    const pedalSentAt = new Map();         // pedal id -> last setPedal timestamp (drag throttle)
+
     function updateMimic() {
       const rel = [...engine.components.values()].filter(c =>
-        c.type === 'pushbutton_no' || c.type === 'pushbutton_nc' || c.type === 'motor3');
-      const sig = rel.map(c => `${c.id}:${c.type}:${c.label}`).join('|');
+        c.type === 'pushbutton_no' || c.type === 'pushbutton_nc' || c.type === 'motor3' ||
+        c.type === 'estop' || c.type === 'pedal' || c.type === 'brake' || c.type === 'vfd' ||
+        c.type === 'floorselector' || c.type === 'floordisplay' || c.type === 'cam10');
+      const sig = rel.map(c => `${c.id}:${c.type}:${c.label}:${c.type === 'floorselector' ? (c.params.floors ?? 10) : ''}`).join('|');
       if (sig !== mimicSig) {
         mimicSig = sig;
-        const btns = rel.filter(c => c.type !== 'motor3');
-        const motors = rel.filter(c => c.type === 'motor3');
+        const byType = (t) => rel.filter(c => c.type === t);
+        const btns = rel.filter(c => c.type === 'pushbutton_no' || c.type === 'pushbutton_nc');
+        const motors = byType('motor3');
+
         $('#mimic-buttons').innerHTML = btns.map(c => {
           const rest = c.label.startsWith(c.id) ? c.label.slice(c.id.length).trim() : c.label;
           return `<div class="mimic-btn-wrap">
@@ -137,6 +162,65 @@
             <span class="mimic-cap">${esc(rest || (c.type === 'pushbutton_nc' ? 'NC contact' : 'NO contact'))}</span>
           </div>`;
         }).join('') || '<span class="mimic-empty">no push buttons</span>';
+
+        const estops = byType('estop');
+        $('#mg-estop').hidden = estops.length === 0;
+        $('#mimic-estops').innerHTML = estops.map(c => `
+          <div class="mimic-btn-wrap">
+            <button class="estop-btn" data-mestop="${esc(c.id)}" aria-label="emergency stop ${esc(c.label)}"><span>STOP</span></button>
+            <span class="mimic-cap">${esc(c.label)}</span>
+          </div>`).join('');
+
+        const pedals = [...byType('pedal'), ...byType('brake')];
+        $('#mg-pedals').hidden = pedals.length === 0;
+        $('#mimic-pedals').innerHTML = pedals.map(c => `
+          <div class="pedal-widget" data-pedal-widget="${esc(c.id)}">
+            <div class="pedal-track ${c.type === 'brake' ? 'brk' : 'acc'}" data-pedal-track="${esc(c.id)}" role="slider"
+                 aria-label="${c.type === 'brake' ? 'brake' : 'throttle'} ${esc(c.label)}" tabindex="0"
+                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="pedal-fill"></div>
+              <div class="pedal-knob"></div>
+            </div>
+            <span class="pedal-id">${esc(c.id)}</span>
+            <span class="pedal-val">0%</span>
+          </div>`).join('');
+
+        const elev = [...byType('floorselector'), ...byType('floordisplay'), ...byType('cam10')];
+        $('#mg-elevator').hidden = elev.length === 0;
+        const fsel = byType('floorselector')[0];
+        const cam = byType('cam10')[0];
+        const floors = fsel ? Math.min(10, Math.max(2, fsel.params.floors ?? 10)) : (cam ? 10 : 0);
+        let elevHtml = '';
+        if (elev.length) {
+          elevHtml += `<div class="car-display" data-car-display>
+              <span class="car-arrow up" data-car-up>▲</span>
+              <span class="car-digit" data-car-digit>&nbsp;</span>
+              <span class="car-arrow down" data-car-down>▼</span>
+            </div>`;
+        }
+        if (fsel) {
+          elevHtml += `<div class="car-calls">` + Array.from({ length: floors }, (_, i) => i + 1).map(f => `
+              <button class="car-call" data-carcall="${esc(fsel.id)}:${f}">${f}</button>`).join('') + `</div>`;
+        }
+        if (cam) {
+          // demo: something has to advance the car position between floors
+          elevHtml += `<div class="car-calls demo">` + Array.from({ length: floors }, (_, i) => i + 1).map(f => `
+              <button class="car-call demo" data-carmove="${esc(cam.id)}:${f}" title="move the car to floor ${f} (demo)">${f}</button>`).join('')
+            + `<span class="car-note">move car</span></div>`;
+        }
+        $('#mimic-elevator').innerHTML = elevHtml;
+
+        const drives = byType('vfd');
+        $('#mg-drives').hidden = drives.length === 0;
+        $('#mimic-drives').innerHTML = drives.map(c => `
+          <div class="mimic-motor" data-mdrive="${esc(c.id)}">
+            <span class="drive-freq">0.0<span class="hz">Hz</span></span>
+            <span class="mimic-mot-meta">
+              <span class="mimic-mot-id">${esc(c.id)}</span>
+              <span class="mimic-mot-state">off</span>
+            </span>
+          </div>`).join('');
+
         $('#mimic-motors').innerHTML = motors.map(c => `
           <div class="mimic-motor" data-mmotor="${esc(c.id)}">
             <span class="mimic-disc"><span class="rotor"><i></i></span></span>
@@ -147,10 +231,36 @@
           </div>`).join('') || '<span class="mimic-empty">no motors</span>';
         $('#mimic-panel').hidden = rel.length === 0;
       }
+
       for (const c of engine.components.values()) {
         if (c.type === 'pushbutton_no' || c.type === 'pushbutton_nc') {
           const el = document.querySelector(`[data-mimic="${c.id}"]`);
           if (el) el.classList.toggle('pressed', !!c.state.pressed);
+        } else if (c.type === 'estop') {
+          const el = document.querySelector(`[data-mestop="${c.id}"]`);
+          if (el) el.classList.toggle('tripped', !!c.state.pressed);
+        } else if (c.type === 'pedal' || c.type === 'brake') {
+          const widget = document.querySelector(`[data-pedal-widget="${c.id}"]`);
+          if (!widget) continue;
+          const v = pedalDragging?.id === c.id ? (pedalDragging.value ?? 0) : (c.state.value || 0);
+          const fill = widget.querySelector('.pedal-fill');
+          const knob = widget.querySelector('.pedal-knob');
+          const valEl = widget.querySelector('.pedal-val');
+          fill.style.height = `${Math.round(v * 100)}%`;
+          knob.style.bottom = `calc(${Math.round(v * 100)}% - 9px)`;
+          valEl.textContent = `${Math.round(v * 100)}%`;
+          valEl.classList.toggle('on', v > 0.02);
+          widget.querySelector('.pedal-track').setAttribute('aria-valuenow', Math.round(v * 100));
+        } else if (c.type === 'vfd') {
+          const wrap = document.querySelector(`[data-mdrive="${c.id}"]`);
+          if (!wrap) continue;
+          wrap.querySelector('.drive-freq').firstChild.textContent = (c.state.freq || 0).toFixed(1);
+          let cls = '', txt = 'off';
+          if (c.state.fault) { cls = 'stall'; txt = 'FAULT'; }
+          else if (c.state.running) { cls = 'run'; txt = c.state.dir > 0 ? 'forward' : 'reverse'; }
+          const stateEl = wrap.querySelector('.mimic-mot-state');
+          stateEl.className = `mimic-mot-state ${cls}`;
+          stateEl.textContent = txt;
         } else if (c.type === 'motor3') {
           const wrap = document.querySelector(`[data-mmotor="${c.id}"]`);
           if (!wrap) continue;
@@ -174,7 +284,49 @@
           stateEl.textContent = Math.abs(sp) > 0.01 ? `${txt} · ${Math.round(Math.abs(sp) * 100)} %` : txt;
         }
       }
+
+      // ---- car display (floor indicator + travel arrows) ----
+      const digitEl = document.querySelector('[data-car-digit]');
+      if (digitEl) {
+        const all = [...engine.components.values()];
+        const fds = all.filter(c => c.type === 'floordisplay');
+        const cams = all.filter(c => c.type === 'cam10');
+        let floor = null, up = false, down = false;
+        if (fds.length) {
+          floor = fds[0].state.floor ?? 0;
+          up = !!fds[0].state.up; down = !!fds[0].state.down;
+        } else if (cams.length) {
+          floor = cams[0].state.position ?? 0;
+        }
+        if (floor !== null) {
+          const running = all.find(c => c.type === 'motor3' && Math.abs(c.state.speed || 0) > 0.05);
+          if (!fds.length && running) { up = (running.state.speed || 0) > 0; down = !up; }
+          digitEl.textContent = floor === -1 ? 'E' : (floor === 0 ? '\u00a0' : String(floor));
+          digitEl.classList.toggle('lit', floor !== 0);
+        }
+        const upEl = document.querySelector('[data-car-up]');
+        const dnEl = document.querySelector('[data-car-down]');
+        if (upEl) upEl.classList.toggle('lit', up);
+        if (dnEl) dnEl.classList.toggle('lit', down);
+      }
+      // ---- car-call + move-car button states ----
+      const fsel = [...engine.components.values()].find(c => c.type === 'floorselector');
+      if (fsel) {
+        document.querySelectorAll('[data-carcall]').forEach(b => {
+          const f = Number(b.dataset.carcall.split(':')[1]);
+          b.classList.toggle('lit', fsel.state.floor === f);
+        });
+      }
+      const cam2 = [...engine.components.values()].find(c => c.type === 'cam10');
+      if (cam2) {
+        document.querySelectorAll('[data-carmove]').forEach(b => {
+          const f = Number(b.dataset.carmove.split(':')[1]);
+          b.classList.toggle('lit', cam2.state.position === f);
+        });
+      }
     }
+
+    // panel buttons behave like the physical ones: hold to press, release anywhere
     $('#mimic-panel').addEventListener('pointerdown', (e) => {
       const btn = e.target.closest?.('[data-mimic]');
       if (!btn) return;
@@ -191,6 +343,80 @@
     };
     window.addEventListener('pointerup', releaseMimicHeld);
     window.addEventListener('pointercancel', releaseMimicHeld);
+
+    // e-stop mushroom (click trips, click again twist-releases), car calls, move-car
+    $('#mimic-panel').addEventListener('click', (e) => {
+      const stop = e.target.closest?.('[data-mestop]');
+      if (stop) {
+        const c = engine.components.get(stop.dataset.mestop);
+        if (c) { engine.setSwitch(c.id, !!c.state.pressed); renderNow(); }
+        return;
+      }
+      const call = e.target.closest?.('[data-carcall]');
+      if (call) {
+        const [id, f] = call.dataset.carcall.split(':');
+        const c = engine.components.get(id);
+        if (c) { engine.setSelector(id, c.state.floor === Number(f) ? 0 : Number(f)); renderNow(); }
+        return;
+      }
+      const move = e.target.closest?.('[data-carmove]');
+      if (move) {
+        const [id, f] = move.dataset.carmove.split(':');
+        engine.setPosition(id, Number(f));
+        renderNow();
+      }
+    });
+
+    // ---- analog pedal sliders: drag the knob like a real pedal ----
+    function pedalFromEvent(track, clientY) {
+      const r = track.getBoundingClientRect();
+      return Math.max(0, Math.min(1, (r.bottom - clientY) / r.height));
+    }
+    $('#mimic-pedals').addEventListener('pointerdown', (e) => {
+      const track = e.target.closest?.('[data-pedal-track]');
+      if (!track) return;
+      e.preventDefault();
+      pedalDragging = { id: track.dataset.pedalTrack, track, value: pedalFromEvent(track, e.clientY) };
+      track.setPointerCapture?.(e.pointerId);
+      engine.setPedal(pedalDragging.id, pedalDragging.value);
+      renderNow();
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (!pedalDragging) return;
+      const v = pedalFromEvent(pedalDragging.track, e.clientY);
+      pedalDragging.value = v;
+      const now = performance.now();
+      if (now - (pedalSentAt.get(pedalDragging.id) || 0) > 60) {
+        pedalSentAt.set(pedalDragging.id, now);
+        engine.setPedal(pedalDragging.id, v);
+      }
+      renderNow(); // live pedal feedback while dragging
+    });
+    const endPedalDrag = () => {
+      if (!pedalDragging) return;
+      engine.setPedal(pedalDragging.id, pedalDragging.value ?? 0);
+      pedalDragging = null;
+      renderNow();
+    };
+    window.addEventListener('pointerup', endPedalDrag);
+    window.addEventListener('pointercancel', endPedalDrag);
+    // keyboard: focus a pedal track, press up/down to feather it
+    $('#mimic-pedals').addEventListener('keydown', (e) => {
+      const track = e.target.closest?.('[data-pedal-track]');
+      if (!track) return;
+      const id = track.dataset.pedalTrack;
+      const c = engine.components.get(id);
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const step = e.shiftKey ? 0.25 : 0.05;
+        engine.setPedal(id, Math.max(0, Math.min(1, (c?.state.value || 0) + (e.key === 'ArrowUp' ? step : -step))));
+        renderNow();
+      } else if (e.key === 'Home' || e.key === 'End') {
+        e.preventDefault();
+        engine.setPedal(id, e.key === 'End' ? 0 : 1);
+        renderNow();
+      }
+    });
 
     async function loadCircuit(name) {
       const res = await fetch(`circuits/${name}.json`);
@@ -234,6 +460,28 @@
       if (pressEl) { engine.pressButton(pressEl.dataset.press, false); renderNow(); }
     });
     svg.addEventListener('click', (e) => {
+      const estopEl = e.target.closest?.('[data-estop]');
+      if (estopEl) {
+        const c = engine.components.get(estopEl.dataset.estop);
+        if (c) { engine.setSwitch(c.id, !!c.state.pressed); renderNow(); } // pressed → twist-release
+        return;
+      }
+      const copEl = e.target.closest?.('[data-copfloor]');
+      if (copEl) {
+        const [id, f] = copEl.dataset.copfloor.split(':');
+        const c = engine.components.get(id);
+        if (c) { engine.setSelector(id, c.state.floor === Number(f) ? 0 : Number(f)); renderNow(); }
+        return;
+      }
+      const sel3El = e.target.closest?.('[data-toggle3]');
+      if (sel3El) {
+        const c = engine.components.get(sel3El.dataset.toggle3);
+        if (c) {
+          const next = c.state.pos === '0' ? '1' : c.state.pos === '1' ? '2' : '0';
+          engine.setSelector(c.id, next); renderNow();
+        }
+        return;
+      }
       const t = e.target.closest?.('[data-toggle]');
       if (!t) return;
       const id = t.dataset.toggle;

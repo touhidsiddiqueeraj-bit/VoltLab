@@ -95,10 +95,12 @@ its per-floor branches are a great study in generated-but-readable schematics.
 
 Key ideas:
 
-- **3-deck floor cam (`CAM1`)** models the car position. Deck A is COM→F(*position*);
+- **4-deck floor cam (`CAM1`)** models the car position. Deck A is COM→F(*position*);
   decks B/C close G/GH and H/HH contacts for every floor **except** the current one —
   the per-floor isolation that a shared junction can't give you (junction-merged
   branches backfeed and self-hold; a classic relay trap the complement decks avoid).
+  Deck D (ICOM→IF) is an isolated indicator deck — wire a floor display there and it
+  can never backfeed the control decks, the trap `elevator-cop` dodges by design.
 - **Per-floor call relays K1–K10** latch on car button presses (S1–S10) with their own
   seal-ins and lamps H1–H10.
 - **Dispatch chain:** a call at floor n → K(n) → KP (dispatch) → KM_run, gated by the

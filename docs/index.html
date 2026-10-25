@@ -6,7 +6,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>VoltLab — Motor Control Circuit Simulator</title>
-  <meta name="description" content="A minimal, cross-platform motor-control circuit simulator with a real physics engine, IEC-style schematics, PDF drawing sets and a full MCP agent layer. Try it live in your browser.">
+  <meta name="description" content="A cross-platform motor-control circuit simulator with a real physics engine, IEC-style schematics, operator controls (VFD, pedals, e-stop, car panels), PDF drawing sets and a full MCP agent layer. Desktop installers + Android APK. Try it live in your browser.">
   <link rel="icon" href="demo/icon.svg">
   <style>
     :root {
@@ -109,7 +109,9 @@
       <span class="logo"><svg class="logo-img" viewBox="0 0 512 512" aria-hidden="true"><defs><linearGradient id="lg-b" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#ffe3b0"/><stop offset="0.5" stop-color="#ffb454"/><stop offset="1" stop-color="#e0862d"/></linearGradient></defs><path d="M296,104 L180,282 L248,282 L204,412 L340,224 L268,224 L326,104 Z" fill="url(#lg-b)"/></svg> VoltLab</span>
       <span class="spacer"></span>
       <a href="#demo">Live demo</a>
+      <a href="#operator">Operator round</a>
       <a href="#circuits">Circuits</a>
+      <a href="#download">Download</a>
       <a href="#docs">Docs</a>
       <a class="gh" href="https://github.com/touhidsiddiqueeraj-bit/VoltLab">GitHub ↗</a>
     </div>
@@ -120,23 +122,27 @@
       <span class="kicker">Motor control circuit simulator</span>
       <h1>Wire it. Run it. <em>Break it.</em><br>Let an agent drive it.</h1>
       <p class="lead">VoltLab simulates electromechanical motor-control circuits — DOL starters,
-        interlocks, timers, reversing starters, even a 10-story relay elevator — with a real
-        per-tick electrical solver and IEC-style schematics. And because it speaks
-        <b>MCP</b>, an LLM agent can build, wire, fault and document every circuit for you.</p>
+        interlocks, reversing starters, a 10-story relay elevator, an electric vehicle drive —
+        with a real per-tick electrical solver and IEC-style schematics. Drive them like
+        machines: <b>accelerator &amp; brake pedals</b>, a <b>VFD</b> with frequency ramps,
+        <b>e-stop mushrooms</b>, car operating panels. And because it speaks <b>MCP</b>,
+        an LLM agent can build, wire, fault and document every circuit for you.</p>
       <div class="badges">
         <img alt="CI" src="https://img.shields.io/github/actions/workflow/status/touhidsiddiqueeraj-bit/VoltLab/ci.yml?branch=main&label=CI">
         <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg">
+        <img alt="Release" src="https://img.shields.io/github/v/release/touhidsiddiqueeraj-bit/VoltLab?label=release&color=ffb454">
         <img alt="Node ≥ 18" src="https://img.shields.io/badge/node-%E2%89%A518-brightgreen">
         <img alt="MCP server" src="https://img.shields.io/badge/MCP-server-8A2BE2">
       </div>
       <div class="cta">
         <a class="btn primary" href="#demo">▶ Try it live</a>
+        <a class="btn" href="#download">⬇ Desktop &amp; Android</a>
         <a class="btn" href="https://github.com/touhidsiddiqueeraj-bit/VoltLab">Source on GitHub</a>
         <a class="btn" href="#quickstart">Get started</a>
       </div>
 
       <div class="shot">
-        <img src="media/dol-starter-dark.png" alt="VoltLab running the DOL starter demo in dark theme">
+        <img src="media/vehicle-console.png" alt="VoltLab driving an electric vehicle circuit: accelerator pedal, VFD readout and traction motor in the operator console">
       </div>
     </div>
   </header>
@@ -154,8 +160,10 @@
       </div>
       <p class="demo-note"><b>Try:</b> hold <b>S1</b> on the schematic — the contactor picks up and the
         motor spins (release: the seal-in keeps it running). Toggle breaker <b>Q1</b> by clicking it.
-        Pick <b>reversing-starter</b> from the dropdown and watch the interlock. When the thermal
-        overload <b>KK1</b> trips (⏩ 5s after a stall), click its red <b>RESET</b>.</p>
+        Pick <b>reversing-starter</b> and watch the interlock. When the thermal overload <b>KK1</b>
+        trips (⏩ 5s after a stall), click its red <b>RESET</b>. New in v1.3: load <b>vehicle-drive</b>
+        and drag the <b>accelerator pedal</b> in the console — or slam the <b>e-stop</b> and watch
+        the drive ramp down; take <b>elevator-cop</b> for a ride from its car operating panel.</p>
     </div>
   </section>
 
@@ -166,22 +174,64 @@
       <div class="grid">
         <div class="card"><h3><span class="ico">🔌</span>Real physics</h3>
           <p>Per-tick union-find netlists and phase propagation: 6× FLC inrush, class-10 thermal
-          trip curves, single-phasing, coast-down, fuse blowing — not a canned animation.</p></div>
+          trip curves, single-phasing, coast-down, fuse blowing — plus VFDs with synthesized
+          rotating fields, frequency ramps and phase-sequence motor direction.</p></div>
+        <div class="card"><h3><span class="ico">🕹</span>Operator console</h3>
+          <p>The bottom panel grows real controls for whatever the circuit contains: drag-able
+          accelerator/brake pedals, a twist-release e-stop mushroom, drive Hz + direction
+          readouts, a 7-segment floor indicator and car-call grids.</p></div>
         <div class="card"><h3><span class="ico">📐</span>IEC-style schematics</h3>
-          <p>16 device types drawn as proper IEC symbols, phase-colored live wires, terminal-level
+          <p>23 device types drawn as proper IEC symbols, phase-colored live wires, terminal-level
           wiring, zoom from 25–300 %, inspector and event log.</p></div>
         <div class="card"><h3><span class="ico">🤖</span>MCP agent layer</h3>
-          <p>26 tools over stdio JSON-RPC (or plain HTTP): agents build, wire, fault, reset,
-          fast-forward and inspect circuits — the full test suite is an agent session.</p></div>
+          <p>29 tools over stdio JSON-RPC (or plain HTTP): agents build, wire, fault, reset,
+          fast-forward, drive pedals and call floors — the full test suite is an agent session.</p></div>
         <div class="card"><h3><span class="ico">📄</span>Self-documenting exports</h3>
           <p>Any circuit exports as an IEC 61082-1-style multi-sheet PDF drawing set (zone grids,
           title blocks, sheet index) and a scripted 720p demo video.</p></div>
-        <div class="card"><h3><span class="ico">🎓</span>Learn as you go</h3>
-          <p>An 11-step interactive tutorial with action gates, five worked example circuits with
-          behavior tests, light and dark themes.</p></div>
-        <div class="card"><h3><span class="ico">📦</span>Zero runtime deps</h3>
-          <p>Server, simulator and MCP bridge are pure Node stdlib. Electron is the only dev
-          dependency. <code>npm run serve</code> and you're running.</p></div>
+        <div class="card"><h3><span class="ico">📱</span>Desktop, Android, offline</h3>
+          <p>Signed installers for Windows, macOS and Linux plus an Android APK with the full
+          offline editor — or zero-install right in this browser. Server, simulator and MCP
+          bridge are pure Node stdlib.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="operator">
+    <div class="wrap">
+      <span class="kicker">New in v1.3 — the operator round</span>
+      <h2>Drive it like a machine</h2>
+      <p class="lead">Seven new electrical devices — a variable frequency drive, accelerator
+        and brake pedals, an e-stop mushroom, a 3-position selector, a car-call panel and a
+        floor indicator — turn schematics into things you <i>operate</i>. Nothing here is
+        decoration: the pedal is a potentiometer feeding the VFD's analog reference, the
+        brake's NC contact cuts the drive enable while its mechanical side drags the motor,
+        and car calls latch through real relay logic.</p>
+      <div class="pair">
+        <figure>
+          <img src="media/vehicle-console.png" alt="Electric vehicle drive with the operator console: accelerator pedal dragged high, VFD readout, traction motor spinning" loading="lazy">
+          <figcaption><b>vehicle-drive:</b> drag the accelerator and the pedal's analog output
+          ramps the VFD toward its reference — the traction motor follows the synthesized
+          rotating field, direction and all.</figcaption>
+        </figure>
+        <figure>
+          <img src="media/vehicle-estop.png" alt="The same vehicle drive after the e-stop: frequency ramping down, motor coasting" loading="lazy">
+          <figcaption>Slam the <b>e-stop</b>: the drive's enable path opens, the frequency
+          ramps down and the motor coasts — the brake lamps tell you why.</figcaption>
+        </figure>
+      </div>
+      <div class="pair">
+        <figure>
+          <img src="media/elevator-cop.png" alt="Elevator with car operating panel: car-call buttons, 7-segment floor indicator and travel arrows" loading="lazy">
+          <figcaption><b>elevator-cop:</b> hall buttons and car calls share one relay bank; the
+          cam's isolated indicator deck drives the floor display without backfeeding the
+          control decks.</figcaption>
+        </figure>
+        <figure>
+          <img src="media/elevator-travel.png" alt="Elevator mid-journey: floor indicator showing 5, hoist motor running" loading="lazy">
+          <figcaption>Mid-travel: the 7-segment indicator and up/down arrows track the hoist
+          motor's direction — just like the landing fixtures.</figcaption>
+        </figure>
       </div>
     </div>
   </section>
@@ -189,14 +239,16 @@
   <section id="circuits">
     <div class="wrap">
       <span class="kicker">Examples included</span>
-      <h2>Five worked circuits, all test-covered</h2>
+      <h2>Seven worked circuits, all test-covered</h2>
       <table class="circuits">
         <tr><th>Circuit</th><th>What it demonstrates</th></tr>
         <tr><td><code>dol-starter</code></td><td>Direct-On-Line start/stop, seal-in holding, class-10 overload trip, trip lamp</td></tr>
         <tr><td><code>reversing-starter</code></td><td>Forward/reverse contactors, phase-swap wiring, an interlock that makes simultaneous energizing impossible</td></tr>
         <tr><td><code>timer-sequence</code></td><td>On-delay timer starts a second conveyor motor 3 s after the first</td></tr>
         <tr><td><code>elevator-2floor</code></td><td>Call latching, travel limit switches, NC cross-interlock, hoist overload</td></tr>
-        <tr><td><code>elevator-10floor</code></td><td><b>Full 10-story relay elevator</b> — 3-deck floor cam, per-floor call relays, auto-dispatch with dwell: 46 components, 169 wires</td></tr>
+        <tr><td><code>elevator-10floor</code></td><td><b>Full 10-story relay elevator</b> — 4-deck floor cam, per-floor call relays, auto-dispatch with dwell: 46 components, 174 wires</td></tr>
+        <tr><td><code>vehicle-drive</code></td><td><b>Electric vehicle drive</b> — VFD with synthesized rotating field, accelerator pedal as the analog speed reference, service brake with NC drive interlock + mechanical deceleration + lamps, key switch, FWD/OFF/REV selector, e-stop</td></tr>
+        <tr><td><code>elevator-cop</code></td><td>The 10-story machine <b>plus a car operating panel</b> — car calls parallel the hall buttons, the cam's isolated indicator deck feeds the floor display, e-stop in the control feed: 49 components, 202 wires</td></tr>
       </table>
       <div class="pair">
         <figure>
@@ -230,6 +282,33 @@
     </div>
   </section>
 
+  <section id="download">
+    <div class="wrap">
+      <span class="kicker">v1.3.0 — cross-platform</span>
+      <h2>Take it with you</h2>
+      <p class="lead">Every release ships signed desktop installers plus an Android APK that
+        packs the <b>full offline editor</b> — place, wire, edit and run circuits with no
+        server, no network, no backend. Same engine, same circuits, same UI as the page above.</p>
+      <div class="pair">
+        <figure>
+          <img src="media/offline-editor.png" alt="VoltLab offline editor running from the APK bundle, ramping a VFD drive at 88 percent pedal" loading="lazy">
+          <figcaption>The offline editor — here ramping the drive to 44 Hz at 88 % pedal.
+          Circuits save to local storage; the whole bundle is ~380 KB.</figcaption>
+        </figure>
+        <figure>
+          <div style="display:flex; flex-direction:column; gap:12px; justify-content:center; height:100%; min-height:220px; padding:8px 0;">
+            <a class="btn primary" style="text-align:center" href="https://github.com/touhidsiddiqueeraj-bit/VoltLab/releases/latest">⬇ Desktop installers — GitHub Releases</a>
+            <a class="btn" style="text-align:center" href="https://github.com/touhidsiddiqueeraj-bit/VoltLab/releases/download/v1.3.0/VoltLab-1.3.0.apk">🤖 Android APK — 3.4 MB, full editor</a>
+            <p style="color:var(--dim); font-size:13.5px; margin:0">Windows setup + portable,
+              macOS dmg for Apple silicon &amp; Intel, Linux AppImage + deb. The APK upgrades
+              in place over earlier VoltLab installs (same signing key), and SHA-256 sums are
+              published with every release.</p>
+          </div>
+        </figure>
+      </div>
+    </div>
+  </section>
+
   <section id="quickstart">
     <div class="wrap">
       <span class="kicker">Run the full app</span>
@@ -240,9 +319,9 @@ npm install            <span class="c-comment"># once — installs Electron only
 
 npm run serve          <span class="c-comment"># browser mode → http://127.0.0.1:8123</span>
 npm start              <span class="c-comment"># or the Electron desktop window</span>
-npm test               <span class="c-comment"># 31 headless tests: engine + circuits + MCP end-to-end</span></code></pre>
+npm test               <span class="c-comment"># 57 headless tests: engine + circuits + features + MCP end-to-end</span></code></pre>
       <p class="lead" style="margin-top:18px">Agents connect over MCP — point any client at
-        <code>mcp/server.mjs</code> and it gets the full 26-tool catalog
+        <code>mcp/server.mjs</code> and it gets the full 29-tool catalog
         (<a href="https://github.com/touhidsiddiqueeraj-bit/VoltLab/blob/main/docs/mcp.md">reference</a>).</p>
     </div>
   </section>
@@ -253,9 +332,10 @@ npm test               <span class="c-comment"># 31 headless tests: engine + cir
       <h2>Documentation</h2>
       <div class="grid">
         <a class="card" href="https://github.com/touhidsiddiqueeraj-bit/VoltLab/blob/main/docs/architecture.md"><h3>🏛 Architecture</h3><p>How the solver, host, UI and MCP layer fit together — and the sharp edges we hit building it.</p></a>
-        <a class="card" href="https://github.com/touhidsiddiqueeraj-bit/VoltLab/blob/main/docs/mcp.md"><h3>🤖 MCP reference</h3><p>All 26 tools with arguments, raw-HTTP equivalents and a worked agent session.</p></a>
+        <a class="card" href="https://github.com/touhidsiddiqueeraj-bit/VoltLab/blob/main/docs/mcp.md"><h3>🤖 MCP reference</h3><p>All 29 tools with arguments, raw-HTTP equivalents and a worked agent session.</p></a>
         <a class="card" href="https://github.com/touhidsiddiqueeraj-bit/VoltLab/blob/main/docs/circuit-format.md"><h3>🧾 Circuit format</h3><p>The JSON schema: components, wires, waypoints and demo scripts.</p></a>
-        <a class="card" href="https://github.com/touhidsiddiqueeraj-bit/VoltLab/blob/main/docs/examples.md"><h3>💡 Example circuits</h3><p>A guided tour of all five examples with scenarios and exercises.</p></a>
+        <a class="card" href="https://github.com/touhidsiddiqueeraj-bit/VoltLab/blob/main/docs/examples.md"><h3>💡 Example circuits</h3><p>A guided tour of all seven examples with scenarios and exercises.</p></a>
+        <a class="card" href="https://github.com/touhidsiddiqueeraj-bit/VoltLab/blob/main/docs/apk.md"><h3>📱 Android &amp; offline</h3><p>How the browser demo grew into a signed offline-editor APK: the Capacitor recipe, signing, and what ships inside.</p></a>
       </div>
     </div>
   </section>
