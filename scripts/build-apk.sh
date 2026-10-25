@@ -18,10 +18,12 @@ OUT="${1:-$REPO/dist/VoltLab-$(node -p "require('$REPO/package.json').version").
 [ -n "${ANDROID_HOME:-}" ] || { echo "set ANDROID_HOME (needs platforms;android-35 + build-tools)"; exit 1; }
 if [ ! -f "$WORK/voltlab-release.keystore" ]; then
   mkdir -p "$WORK"
+  # override for real releases: export KEYSTORE_PASSWORD=...
+  KS_PASS="${KEYSTORE_PASSWORD:-VoltLab2026!Release}"
   echo "Generating release keystore at $WORK/voltlab-release.keystore"
   keytool -genkeypair -v -keystore "$WORK/voltlab-release.keystore" -alias voltlab \
     -keyalg RSA -keysize 2048 -validity 10950 \
-    -storepass VoltLab2026!Release -keypass VoltLab2026!Release \
+    -storepass "$KS_PASS" -keypass "$KS_PASS" \
     -dname "CN=VoltLab, OU=VoltLab, O=touhidsiddiqueeraj-bit, L=Dhaka, C=BD"
 fi
 
@@ -60,9 +62,9 @@ python3 "$REPO/../scripts/make_android_icons.py" || \
 # 3) keystore properties --------------------------------------------------------
 cat > android/voltlab-release.properties <<EOF
 storeFile=../voltlab-release.keystore
-storePassword=VoltLab2026!Release
+storePassword=${KEYSTORE_PASSWORD:-VoltLab2026!Release}
 keyAlias=voltlab
-keyPassword=VoltLab2026!Release
+keyPassword=${KEYSTORE_PASSWORD:-VoltLab2026!Release}
 EOF
 echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 
