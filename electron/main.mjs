@@ -274,8 +274,7 @@ app.whenReady().then(async () => {
         const img = await wc.capturePage();
         console.log('[check] capturePage:', img.isEmpty() ? 'EMPTY' : `${img.getSize().width}x${img.getSize().height}`);
         if (!img.isEmpty()) {
-          const out = '/home/touhid/Downloads/ekts/out/check.png';
-          fs.mkdirSync(path.dirname(out), { recursive: true });
+          const out = path.join(app.getPath('userData'), 'check.png');
           fs.writeFileSync(out, img.toPNG());
           console.log('[check] capture written:', out);
         }
