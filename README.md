@@ -184,11 +184,25 @@ curl http://127.0.0.1:8123/api/state | jq    # full snapshot (or stream /api/eve
 
 **Circuit ▸ Record demo video** makes the app *perform its own circuit*: per the circuit's
 `demo` script it presses every button on the live simulation while recording 720p @ 25 fps
-with per-step captions and a camera that eases toward whatever it's operating. Saved under
-`exports/` as webm, transcoded to mp4 when ffmpeg is available.
+with per-step captions and a camera that eases toward whatever it's operating. Saved as
+webm, transcoded to mp4 when ffmpeg is available.
 
 Both exports are also agent tools (`export_pdf`, `export_video`) — an agent can document
 any circuit it builds.
+
+### Where your files go
+
+Exports and saved circuits are written to the OS data directory — never inside the
+(read-only) install — so they survive updates and work from an AppImage:
+
+| | Path |
+|---|---|
+| Linux | `~/.config/voltlab/exports`, `~/.config/voltlab/circuits` |
+| Windows | `%APPDATA%\voltlab\exports`, `%APPDATA%\voltlab\circuits` |
+| macOS | `~/Library/Application Support/voltlab/exports`, `.../circuits` |
+| `node server.js` | a writable checkout keeps writing `exports/` and `circuits/` in place, as always |
+
+The Electron log line `exports → …` prints the exact location at startup.
 
 ## Tutorial
 
@@ -202,7 +216,7 @@ perform the action.
 ## Tests & packaging
 
 ```bash
-npm test                        # engine + circuit + local-host tests + MCP end-to-end (57 tests)
+npm test                        # engine + circuit + local-host tests + MCP end-to-end (63 tests)
 node --test test/dol.test.mjs   # just the DOL physics scenario (14 tests)
 npm start -- --smoke            # Electron headless self-test → prints SMOKE OK
 npm start -- --screenshot=out.png   # load demo, capture PNG, exit
@@ -223,12 +237,14 @@ installers on all three desktops and attaches them to a draft GitHub Release
 | Linux | `VoltLab-x.y.z-x86_64.AppImage` + `voltlab_x.y.z_amd64.deb` |
 | Android | `VoltLab-x.y.z.apk` — the **full editor** offline (Tier 2, [details](docs/apk.md)); built locally with Capacitor + a release key |
 
-Plain `git tag v1.1.0 && git push --tags` is all it takes to cut a release.
+Plain `git tag v1.3.1 && git push --tags` is all it takes to cut a release.
 
 - Engine tests drive the real DOL scenario headlessly: pick-up, seal-in, trip timing,
   phase loss, fuse blowing — no browser involved.
 - `test/mcp.e2e.mjs` spawns the real HTTP host **and** the real MCP stdio server, then
   drives the full user scenario purely through `tools/call` (24 checks).
+- `test/packaging.test.mjs` pins the read-only-install behaviour that the v1.3.0 AppImage
+  tripped over: exports and saves must fall back to writable user dirs, never crash.
 
 ## Project layout
 
@@ -253,6 +269,7 @@ docs/             GitHub Pages site: landing page + live demo + deep-dive docs
 | `VOLTLAB_PORT` | Server port (default 8123; Electron prints its port if 8123 was taken) |
 | `VOLTLAB_AUTOLOAD=none` | Start with an empty canvas instead of the DOL demo |
 | `VOLTLAB_URL` | MCP bridge → app URL (default `http://127.0.0.1:8123`) |
+| `VOLTLAB_EXPORTS_DIR` | Override where `node server.js` writes exports (packaged apps always use the OS data dir) |
 | `VL_CHROMIUM_FLAGS` | Comma-separated extra Chromium switches for the Electron shell |
 
 ## Acknowledgments

@@ -81,9 +81,11 @@ tier, v1.1.0); Tier 2 wraps the full editor (v1.2.0).
 | Item | Resolution |
 |---|---|
 | Touch targets | terminals 13 px hit circles on coarse pointers; 38–40 px buttons; 52 px mimic buttons |
-| Pinch-zoom | two-pointer gesture on the canvas (transform plumbing reused) |
+| Pinch-zoom | two-pointer gesture on the canvas: spread = zoom, drag = pan, both anchored at the fingers |
+| Phone fit | auto-fit floors at 70 % zoom under 900 px so circuits stay legible; pinch out for the overview |
 | `window.prompt` | in-page `<dialog>` Save-as |
 | Back button | WebView default (exit); cancel via on-screen affordances |
+| Android 15 edge-to-edge | `adjustMarginsForEdgeToEdge: auto` insets the WebView behind the status/gesture bars (targetSdk 35); dark window chrome + light bar icons |
 | APK size | ~3.4 MB |
 | Performance | per-tick union-find solver — no problem in a WebView |
 | Play Store | not required for sideloading; signing key + console if you want it there |
