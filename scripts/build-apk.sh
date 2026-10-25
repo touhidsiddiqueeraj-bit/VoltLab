@@ -45,7 +45,11 @@ cat > capacitor.config.json <<'EOF'
   "appId": "io.voltlab.simulator",
   "appName": "VoltLab",
   "webDir": "www",
-  "android": { "allowMixedContent": false },
+  "backgroundColor": "#0d1117",
+  "android": {
+    "allowMixedContent": false,
+    "adjustMarginsForEdgeToEdge": "auto"
+  },
   "server": { "androidScheme": "https" }
 }
 EOF

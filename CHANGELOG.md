@@ -4,52 +4,57 @@ All notable changes to VoltLab are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project adheres to
 [Semantic Versioning](https://semver.org/).
 
-## [1.2.0] — 2026-10-25
+## [1.3.1] — 2026-10-25
 
-### Added — Tier 2: the full editor on Android (and in any browser, offline)
+### Fixed — the packaging round (AppImage crash, Android 15 overlap, phone ergonomics)
 
-- **In-page host (`app/js/local-api.js`).** The real engine + the real tool
-  dispatcher running inside the page, with the same contracts as the HTTP
-  host: command-then-broadcast, a 10 Hz realtime loop, health/state endpoints
-  and export round-trips. Circuits = the bundled examples (via a generated
-  `circuits/index.json` manifest) ∪ anything the user saved to
-  `localStorage`; saved copies shadow bundled ones by name. Dependency-injected
-  (`fetchImpl`, `storage`), so it is fully unit-tested in Node
-  (`test/localapi.test.mjs`, 7 tests).
-- **Transport seam (`app/js/host.js`).** The UI no longer talks to
-  `/api/...` directly. Server mode keeps the exact fetch + SSE behaviour;
-  local mode — the Android APK, `file://`, or `?local=1` in any browser —
-  swaps in the in-page host. One interface, every feature: commands, state
-  stream, circuit listing, exports, screenshots.
-- **Shared dispatcher (`sim/tools.js`).** The tool table + dispatcher moved
-  out of `sim/api.js` into a browser-safe module; `sim/api.js` remains the
-  Node wrapper (fs-backed circuit store) with an identical public surface.
-  Node, Electron, MCP and the browser now execute the same dispatcher code.
-- **Touch editing.** Two-finger pinch zoom around the gesture midpoint,
-  one-finger pan, tap-to-select/wire, hold-to-press mimic buttons; terminals
-  grow to 13 px hit circles on coarse pointers; menus, palette items and
-  buttons get 38–40 px minimum heights. Drags moved from `mousemove` to
-  `pointermove` (mouse, pen and touch unified).
-- **Mobile layout.** Below 900 px the palette and inspector become swipe-in
-  drawers with floating toggles; the toolbar wraps; the canvas fills the
-  workspace.
-- **In-page Save-as dialog.** Android WebViews have no `window.prompt`, so
-  "Save canvas as…" is now a themed `<dialog>` everywhere.
-- **Offline exports.** Video (webm) and PDF reports save to the app's
-  Documents directory via `@capacitor/filesystem` on Android, or download
-  in a plain browser; local screenshots render the SVG canvas to PNG.
-- **Offline bundle (`scripts/build-offline-bundle.sh`).** Assembles the
-  self-contained web app (~300 KB): editor + engine + circuits + manifest.
-  `scripts/build-apk.sh` wraps it in Capacitor 7 with the Filesystem plugin,
-  launcher icons from the app logo, and release signing — v1.2.0 APK is
-  versionCode 3.
+- **Linux AppImage/deb crashed on launch** (`ENOENT mkdir …/resources/app/exports`).
+  Packaged installs are read-only at runtime, and the app tried to create its
+  `exports/` directory inside the install dir. All runtime writes now live in
+  writable per-user locations: exports and screenshots in the OS data dir
+  (`~/.config/VoltLab` on Linux, `%APPDATA%\VoltLab` on Windows,
+  `~/Library/Application Support/VoltLab` on macOS — Electron prints the exact
+  path at startup), user-saved circuits in a `circuits/` overlay next to them.
+  A writable checkout still writes `exports/` and `circuits/` in place, exactly
+  as before (`node server.js` unchanged). `createHost` gained a `stop()` for
+  clean shutdown, and falls back to `~/.voltlab/exports` if the requested
+  exports dir cannot be created.
+- **Circuit saves in read-only installs.** `save_circuit` in the AppImage would
+  have crashed the same way; saves now land in the user circuits overlay and
+  the picker lists the merged library (user copies shadow bundled files of the
+  same name).
+- **Fontconfig warning storm on modern distros.** AppImage/deb runs no longer
+  parse the host's `/etc/fonts/conf.d` (whose 2.15+ syntax the bundled
+  fontconfig cannot read — the "invalid attribute 'xsi:nil'" wall); the app
+  ships a minimal `fonts.conf` (standard font dirs + cache) and points
+  `FONTCONFIG_FILE` at it on Linux.
+- **Android 15 system-bar overlap (the "unusable UI" report).** The APK targets
+  SDK 35, where edge-to-edge is enforced — the WebView drew under the status
+  bar and gesture bar, covering the toolbar and the operator console. The
+  WebView now insets itself (`adjustMarginsForEdgeToEdge: auto`), the window
+  chrome is VoltLab-dark, and screenshots default to the data dir.
+- **Phone fit was a speck.** Auto-fit could shrink a large circuit to ~25 %
+  zoom on a phone. On viewports under 900 px the fit is floored at 70 % —
+  legible, pannable, pinchable. A `load_circuit` race that skipped the fit in
+  server mode is also fixed (the SSE frame announcing the load can beat the
+  command response).
+- **Two-finger gestures rewritten.** Pan (midpoint-follow) and zoom (per-frame
+  spread ratio, anchored at the fingers) are now one combined gesture — a
+  two-finger drag pans even over symbols (one-finger drag there still moves
+  the component), and pinch-zoom no longer drifts when fingers wobble. The
+  Ctrl+wheel zoom anchor math was corrected the same way (screen offsets, not
+  the moving svg rect).
+- **Toolbar declutter on phones.** The fast-forward seconds field and the zoom
+  slider hide below 900 px (⏩ keeps its value; pinch and the − / + buttons
+  remain), and the empty-canvas hint points at the ☰ components drawer
+  instead of a palette that phones don't show.
 
-### Changed
+### Tests
 
-- `test/mcp.e2e.mjs`-verified behaviour is unchanged: 39 unit tests (was 32)
-  and 24 MCP end-to-end checks pass; the Electron `--smoke` DOL scenario
-  passes; http mode, offline mode and the packaged desktop app were all
-  re-verified end-to-end.
+- New `test/packaging.test.mjs` (6 tests): read-only installs fall back instead
+  of crashing, the circuits overlay merges/shadows correctly, writable
+  checkouts are regression-checked, and the mobile fit floor is pinned. Suite:
+  **63 pass**.
 
 ## [1.3.0] — 2026-10-25
 
@@ -100,6 +105,53 @@ All notable changes to VoltLab are documented here. The format follows
   any three distinct phase labels (mains L1-L2-L3 or a drive's synthetic field),
   with neutral explicitly excluded — mains-fed motors behave exactly as before.
 
+
+## [1.2.0] — 2026-10-25
+
+### Added — Tier 2: the full editor on Android (and in any browser, offline)
+
+- **In-page host (`app/js/local-api.js`).** The real engine + the real tool
+  dispatcher running inside the page, with the same contracts as the HTTP
+  host: command-then-broadcast, a 10 Hz realtime loop, health/state endpoints
+  and export round-trips. Circuits = the bundled examples (via a generated
+  `circuits/index.json` manifest) ∪ anything the user saved to
+  `localStorage`; saved copies shadow bundled ones by name. Dependency-injected
+  (`fetchImpl`, `storage`), so it is fully unit-tested in Node
+  (`test/localapi.test.mjs`, 7 tests).
+- **Transport seam (`app/js/host.js`).** The UI no longer talks to
+  `/api/...` directly. Server mode keeps the exact fetch + SSE behaviour;
+  local mode — the Android APK, `file://`, or `?local=1` in any browser —
+  swaps in the in-page host. One interface, every feature: commands, state
+  stream, circuit listing, exports, screenshots.
+- **Shared dispatcher (`sim/tools.js`).** The tool table + dispatcher moved
+  out of `sim/api.js` into a browser-safe module; `sim/api.js` remains the
+  Node wrapper (fs-backed circuit store) with an identical public surface.
+  Node, Electron, MCP and the browser now execute the same dispatcher code.
+- **Touch editing.** Two-finger pinch zoom around the gesture midpoint,
+  one-finger pan, tap-to-select/wire, hold-to-press mimic buttons; terminals
+  grow to 13 px hit circles on coarse pointers; menus, palette items and
+  buttons get 38–40 px minimum heights. Drags moved from `mousemove` to
+  `pointermove` (mouse, pen and touch unified).
+- **Mobile layout.** Below 900 px the palette and inspector become swipe-in
+  drawers with floating toggles; the toolbar wraps; the canvas fills the
+  workspace.
+- **In-page Save-as dialog.** Android WebViews have no `window.prompt`, so
+  "Save canvas as…" is now a themed `<dialog>` everywhere.
+- **Offline exports.** Video (webm) and PDF reports save to the app's
+  Documents directory via `@capacitor/filesystem` on Android, or download
+  in a plain browser; local screenshots render the SVG canvas to PNG.
+- **Offline bundle (`scripts/build-offline-bundle.sh`).** Assembles the
+  self-contained web app (~300 KB): editor + engine + circuits + manifest.
+  `scripts/build-apk.sh` wraps it in Capacitor 7 with the Filesystem plugin,
+  launcher icons from the app logo, and release signing — v1.2.0 APK is
+  versionCode 3.
+
+### Changed
+
+- `test/mcp.e2e.mjs`-verified behaviour is unchanged: 39 unit tests (was 32)
+  and 24 MCP end-to-end checks pass; the Electron `--smoke` DOL scenario
+  passes; http mode, offline mode and the packaged desktop app were all
+  re-verified end-to-end.
 
 ## [1.1.0] — 2026-10-25
 

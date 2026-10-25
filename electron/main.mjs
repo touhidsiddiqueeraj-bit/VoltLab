@@ -17,6 +17,16 @@ import { createHost } from '../server.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const APP_ICON = path.join(__dirname, '..', 'build', 'icon.png');
 
+// Packaged Linux (AppImage/deb): newer distro fontconfig configs use syntax the
+// bundled fontconfig cannot parse — a wall of "invalid attribute 'xsi:nil'"
+// warnings on every start. Point fontconfig at the minimal config shipped with
+// the app instead (standard font dirs, no distro conf.d). Must run before any
+// font is loaded; env is inherited by renderer/GPU processes.
+if (process.platform === 'linux') {
+  const fcConf = path.join(process.resourcesPath, 'fontconfig', 'fonts.conf');
+  if (fs.existsSync(fcConf)) process.env.FONTCONFIG_FILE = fcConf;
+}
+
 // dev (electron .): argv = [electron, appDir, ...flags]; packaged: [binary, ...flags]
 const args = process.argv.slice(app.isPackaged ? 1 : 2);
 const flag = (name) => args.some(a => a === name || a.startsWith(`${name}=`) || a === `--${name}`);
@@ -135,7 +145,7 @@ async function screenshotTool({ path: outPath } = {}) {
     } catch { /* fall through */ }
   }
   if (!image || image.isEmpty()) throw new Error('could not capture a frame (compositor did not paint the window)');
-  const file = outPath || path.join(process.cwd(), 'out', `screenshot-${Date.now()}.png`);
+  const file = outPath || path.join(app.getPath('userData'), 'screenshots', `screenshot-${Date.now()}.png`);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, image.toPNG());
   return { saved: file, size: image.getSize() };
@@ -202,10 +212,18 @@ async function runSmoke(host) {
 
 app.whenReady().then(async () => {
   try {
+    // Writable data lives in userData — packaged installs (AppImage, Program
+    // Files) are read-only; writing exports/saves inside the app dir used to
+    // crash the AppImage at startup (v1.3.0 and earlier).
+    const dataDir = app.getPath('userData');
+    const dataOpts = {
+      exportsDir: path.join(dataDir, 'exports'),
+      userCircuitsDir: path.join(dataDir, 'circuits')
+    };
     // port 8123, fall back to a random free port if occupied
     let host;
-    try { host = await createHost({ port: Number(process.env.VOLTLAB_PORT || process.env.EKTS_PORT) || 8123 }); }
-    catch { host = await createHost({ port: 0 }); }
+    try { host = await createHost({ port: Number(process.env.VOLTLAB_PORT || process.env.EKTS_PORT) || 8123, ...dataOpts }); }
+    catch { host = await createHost({ port: 0, ...dataOpts }); }
     host.api.registerExtra('screenshot', screenshotTool);
     host.registerExportHandler('export_pdf_renderer', pdfFromHtml);
 
@@ -216,6 +234,7 @@ app.whenReady().then(async () => {
     }
 
     console.log(`[voltlab-electron] API on ${host.url}`);
+    console.log(`[voltlab-electron] exports → ${host.exportsDir}`);
 
     if (SMOKE) {
       await new Promise(r => setTimeout(r, 800));

@@ -5,6 +5,7 @@
 
 import http from 'node:http';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -14,7 +15,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const APP_DIR = path.join(__dirname, 'app');
 const SIM_DIR = path.join(__dirname, 'sim');
 const MCP_SCRIPT = path.join(__dirname, 'mcp', 'server.mjs');
-const EXPORTS_DIR = path.join(__dirname, 'exports');
+// default location for exported reports/videos. Override with VOLTLAB_EXPORTS_DIR
+// (packaged builds pass their own via createHost options instead).
+const DEFAULT_EXPORTS_DIR = process.env.VOLTLAB_EXPORTS_DIR || path.join(__dirname, 'exports');
 
 function htmlToPdfViaChrome(htmlPath) {
   return new Promise(resolve => {
@@ -52,9 +55,18 @@ const MIME = {
   '.ico': 'image/x-icon'
 };
 
-export async function createHost({ port = 8123, host = '127.0.0.1' } = {}) {
-  const api = createApi();
-  fs.mkdirSync(EXPORTS_DIR, { recursive: true });
+export async function createHost({ port = 8123, host = '127.0.0.1', exportsDir = DEFAULT_EXPORTS_DIR, circuitsDir, userCircuitsDir } = {}) {
+  const api = createApi({ circuitsDir, userCircuitsDir });
+  // Exports must land somewhere writable. Packaged installs are read-only at
+  // runtime (AppImage squashfs, Program Files, /Applications on locked-down
+  // macs) — writing into the app dir crashes on launch. Fall back to
+  // ~/.voltlab/exports when the requested location cannot be created.
+  let EXPORTS = exportsDir;
+  try { fs.mkdirSync(EXPORTS, { recursive: true }); }
+  catch {
+    EXPORTS = path.join(os.homedir(), '.voltlab', 'exports');
+    fs.mkdirSync(EXPORTS, { recursive: true });
+  }
 
   // renderer listens for these over SSE and uploads the finished artifact
   api.setExportHook((kind, name) => {
@@ -157,7 +169,7 @@ export async function createHost({ port = 8123, host = '127.0.0.1' } = {}) {
 
     if (p === '/api/export/video' && req.method === 'POST') {
       const circuit = sanitizeExportName(url.searchParams.get('circuit') || 'circuit');
-      const file = path.join(EXPORTS_DIR, `${circuit}-${Date.now()}.webm`);
+      const file = path.join(EXPORTS, `${circuit}-${Date.now()}.webm`);
       const chunks = [];
       req.on('data', c => chunks.push(c));
       req.on('end', async () => {
@@ -180,7 +192,7 @@ export async function createHost({ port = 8123, host = '127.0.0.1' } = {}) {
       req.on('end', async () => {
         let html = '', circuit = 'circuit';
         try { const j = JSON.parse(body); html = j.html; circuit = sanitizeExportName(j.circuit || 'circuit'); } catch {}
-        const htmlPath = path.join(EXPORTS_DIR, `${circuit}-report.html`);
+        const htmlPath = path.join(EXPORTS, `${circuit}-report.html`);
         fs.writeFileSync(htmlPath, html);
         let pdfHandler = extraHandlers.get('export_pdf_renderer');
         if (!pdfHandler) pdfHandler = htmlToPdfViaChrome;
@@ -245,10 +257,11 @@ export async function createHost({ port = 8123, host = '127.0.0.1' } = {}) {
   startLoop();
 
   const addr = server.address();
+  const stop = () => { clearInterval(timer); server.close(); };
   return {
-    server, api, port: addr.port, url: `http://${host}:${addr.port}`, broadcast,
+    server, api, port: addr.port, url: `http://${host}:${addr.port}`, broadcast, stop,
     registerExportHandler: (kind, fn) => extraHandlers.set(kind, fn),
-    exportsDir: EXPORTS_DIR
+    exportsDir: EXPORTS
   };
 }
 

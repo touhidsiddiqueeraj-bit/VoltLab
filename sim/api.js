@@ -14,26 +14,46 @@ export const CIRCUITS_DIR = path.join(__dirname, '..', 'circuits');
 // files that live in circuits/ but are not circuits (the offline-bundle manifest)
 const NON_CIRCUITS = new Set(['index.json', 'manifest.json']);
 
-export function createApi({ circuitsDir = CIRCUITS_DIR } = {}) {
+export function createApi({ circuitsDir = CIRCUITS_DIR, userCircuitsDir } = {}) {
   const e = new Engine();
 
+  // circuitsDir = the bundled, read-only library (AppImage/deb/Program Files
+  // mount it read-only). userCircuitsDir = a writable overlay (userData);
+  // saves land there when the bundle can't be written, and user copies shadow
+  // bundled files of the same name.
   const circuits = {
     list() {
-      try {
-        return fs.readdirSync(circuitsDir)
-          .filter(f => f.endsWith('.json') && !NON_CIRCUITS.has(f))
-          .map(f => f.replace(/\.json$/, ''));
-      } catch { return []; }
+      const names = new Set();
+      for (const dir of [circuitsDir, userCircuitsDir]) {
+        if (!dir) continue;
+        try {
+          for (const f of fs.readdirSync(dir)) {
+            if (f.endsWith('.json') && !NON_CIRCUITS.has(f)) names.add(f.replace(/\.json$/, ''));
+          }
+        } catch { /* dir may not exist yet */ }
+      }
+      return [...names];
     },
     load(name) {
-      const file = path.join(circuitsDir, `${name}.json`);
-      return JSON.parse(fs.readFileSync(file, 'utf8'));
+      if (userCircuitsDir) {
+        try { return JSON.parse(fs.readFileSync(path.join(userCircuitsDir, `${name}.json`), 'utf8')); } catch { /* fall through to the bundled copy */ }
+      }
+      return JSON.parse(fs.readFileSync(path.join(circuitsDir, `${name}.json`), 'utf8'));
     },
     save(name, json) {
-      fs.mkdirSync(circuitsDir, { recursive: true });
-      const file = path.join(circuitsDir, `${name}.json`);
-      fs.writeFileSync(file, JSON.stringify(json, null, 2));
-      return file;
+      const body = JSON.stringify(json, null, 2);
+      const primary = path.join(circuitsDir, `${name}.json`);
+      try {
+        fs.mkdirSync(circuitsDir, { recursive: true });
+        fs.writeFileSync(primary, body);
+        return primary;
+      } catch {
+        if (!userCircuitsDir) throw new Error(`cannot write ${primary} (read-only install and no user circuits dir configured)`);
+        fs.mkdirSync(userCircuitsDir, { recursive: true });
+        const target = path.join(userCircuitsDir, `${name}.json`);
+        fs.writeFileSync(target, body);
+        return target;
+      }
     }
   };
 

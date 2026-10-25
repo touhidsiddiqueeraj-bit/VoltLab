@@ -1,0 +1,39 @@
+{
+  "circuits": [
+    {
+      "name": "dol-starter",
+      "title": "dol-starter",
+      "description": "Full DOL (Direct-On-Line) 3-phase motor starter: supply X1 -> breaker Q1 -> fuses F1 -> contactor KM1 (mains + seal-in aux 13-14) -> thermal overload KK1 -> motor M1. Control circuit fused by F4: KK1 NC 95-96 -> STOP S0 (NC) -> START S1 (NO) parallel KM1 aux 13-14 -> coil A1-A2 -> N. Lamps: H1 control power, H2 run (across coil), H3 trip (via KK1 NO 97-98)."
+    },
+    {
+      "name": "elevator-10floor",
+      "title": "elevator-10floor",
+      "description": "Full 10-story relay elevator. Car position is a two-deck floor cam (CAM1): deck A routes 'call pending' power to the current floor, deck B (complement) enables call registration for every floor the car is NOT at. Floor calls latch in relays K1..K10 (lamps H1..H10); the run contactor KM_run dies when the cam reaches a called floor (F(n) through K(n).21-22), which also resets that call via its deck-B seal — so pending calls auto-dispatch. The power path runs X1-Q1-F1-KM_run-{KM_up|KM_dn}-KK1-M1: KM_up passes the phases straight through while KM_dn swaps L2/L3, so the hoist motor genuinely reverses for down calls; NC aux cross-interlocks (KM_up 21-22 in the KM_dn coil path and vice versa) make it impossible to energize both. Try: press a floor button, then advance CAM1 floor by floor."
+    },
+    {
+      "name": "elevator-2floor",
+      "title": "elevator-2floor",
+      "description": "Two-floor elevator control: call up (S1) / call down (S2) latch their contactors (KM1 up, KM2 down) with seal-in aux contacts; top/bottom limit switches (S3/S4) stop the car at the ends; NC aux cross-interlock (KM1 21-22 in the down path, KM2 21-22 in the up path) prevents both contactors ever energizing together; KM2 swaps L2/L3 so the hoist motor actually reverses; thermal overload KK1 protects it. Simulate arrival by pressing the limit switch."
+    },
+    {
+      "name": "elevator-cop",
+      "title": "elevator-cop",
+      "description": "The 10-story relay elevator with a full car operating panel: CS1 registers car calls (maintained, in parallel with the hall push buttons), FD1 is the floor indicator with up/down travel arrows (fed from the floor cam F-deck and the KM_up/KM_dn aux contacts), and SE1 is the emergency stop in the control circuit feed. Call a floor from the Car panel in the operator console, watch the indicator, and trip the e-stop to drop everything."
+    },
+    {
+      "name": "reversing-starter",
+      "title": "reversing-starter",
+      "description": "Reversing (forward/reverse) DOL starter: KM1 feeds the motor in one phase order, KM2 swaps two phases for reverse. Electrical interlocking via NC aux contacts (KM2 21-22 in the forward path, KM1 21-22 in the reverse path) makes it impossible to energize both at once. Each direction seals in through its own aux contact; S0 stops; KK1 protects the motor. To physically reverse a running motor, press S0 first."
+    },
+    {
+      "name": "timer-sequence",
+      "title": "timer-sequence",
+      "description": "Sequential motor start with an on-delay timer: START (S1) energizes KM1 immediately (motor M1 runs, H2 lit) and the KT1 timer coil; after the set delay (3 s) KT1's timed contact 15-16 starts KM2 and motor M2 (H3 lit). STOP (S0) kills both. Classic stamping/ conveyor sequencing demo."
+    },
+    {
+      "name": "vehicle-drive",
+      "title": "vehicle-drive",
+      "description": "Electric vehicle / industrial truck drive: Q1 feeds VFD U1 which generates a variable rotating field for the traction motor M1. The key switch SK, pedal interlock P1 (dead-man) and brake NC pole P2 gate the FWD/REV commands from the 3-position selector SD; the accelerator P1 also feeds U1's analog speed reference (R+/R-), so motor speed follows pedal travel. Pressing the brake opens the drive command, lights H2/H3 and mechanically decelerates M1; the e-stop SE1 kills the whole control chain. Try: key on, SD to I, then drag the throttle."
+    }
+  ]
+}

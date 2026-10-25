@@ -99,7 +99,7 @@ function updateStatus(s) {
   $('#st-run').textContent = s.running ? 'running' : 'paused';
   $('#st-count').textContent = `${s.components.length} comps · ${s.wires.length} wires`;
   $('#welcome').classList.toggle('hidden', s.components.length > 0);
-  if (ui.pendingFit && s.circuit === ui.pendingFit && s.components.length > 0) { ui.pendingFit = null; zoomFit(); }
+  consumePendingFit();
   const btn = $('#btn-run');
   btn.textContent = s.running ? '⏸ Pause' : '▶ Run';
   btn.classList.toggle('paused', !s.running);
@@ -807,24 +807,27 @@ function zoomFit() {
   let mx = 1000, my = 800;
   for (const c of ui.snapshot.components) mx = Math.max(mx, c.x + 150), my = Math.max(my, c.y + 150);
   const wrap = document.querySelector('#canvas-wrap');
-  applyZoom(Math.min((wrap.clientWidth - 30) / mx, (wrap.clientHeight - 30) / my));
+  let z = Math.min((wrap.clientWidth - 30) / mx, (wrap.clientHeight - 30) / my);
+  // Phones: a fit that shrinks the drawing to a speck is worse than a legible,
+  // pannable view — keep symbols/labels readable and let pinch + pan cover the rest.
+  if (window.matchMedia('(max-width: 900px)').matches) z = Math.max(z, 0.7);
+  applyZoom(z);
 }
 $('#btn-zoom-fit').onclick = zoomFit;
 $('#zoom-slider').oninput = (e) => applyZoom(Number(e.target.value) / 100);
 svg.addEventListener('wheel', (e) => {
   if (!e.ctrlKey) return;
   e.preventDefault();
-  const rect = svg.getBoundingClientRect();
-  const scaleF = ui.zoom; // current effective scale incl. transform
-  const cx = (e.clientX - rect.left) / scaleF, cy = (e.clientY - rect.top) / scaleF;
-  applyZoom(ui.zoom * (e.deltaY < 0 ? 1.12 : 0.89), { x: cx, y: cy });
+  // anchor: screen offset inside the scroll viewport (not the moving svg rect)
+  const rect = document.querySelector('#canvas-wrap').getBoundingClientRect();
+  applyZoom(ui.zoom * (e.deltaY < 0 ? 1.12 : 0.89), { x: e.clientX - rect.left, y: e.clientY - rect.top });
 }, { passive: false });
 
 // ---------- touch gestures: two-finger pinch zoom, one-finger pan ----------
 // The wrap's CSS touch-action is none, so these own the whole gesture space.
 const touchWrap = document.querySelector('#canvas-wrap');
 const activePointers = new Map();  // pointerId -> {x, y}
-let pinch = null;                   // {startDist, startZoom}
+let pinch = null;                   // {mid, dist} — two-finger zoom+pan state
 let pan = null;                    // {sx, sy, sl, st, moved}
 let gestureEndsAt = 0;             // suppress stray clicks right after a gesture
 
@@ -837,8 +840,7 @@ touchWrap.addEventListener('pointerdown', (e) => {
     // second finger: a pinch takes over — commit and drop any drag in progress
     if (ui.dragging?.moved) cmd('move_component', { id: ui.dragging.id, x: ui.dragging.x, y: ui.dragging.y });
     ui.dragging = null;
-    const [a, b] = [...activePointers.values()];
-    pinch = { startDist: Math.hypot(a.x - b.x, a.y - b.y) || 1, startZoom: ui.zoom };
+    pinch = { mid: null, dist: null };   // first pointermove seeds mid/dist
     pan = null;
   } else if (activePointers.size === 1 && e.pointerType !== 'mouse' && !onInteractive(e.target)) {
     // touch on empty canvas → pan the viewport
@@ -851,14 +853,25 @@ touchWrap.addEventListener('pointermove', (e) => {
   activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pinch && activePointers.size >= 2) {
     const [a, b] = [...activePointers.values()];
-    const dist = Math.hypot(a.x - b.x, a.y - b.y);
-    if (Math.abs(dist - pinch.startDist) > 4) {
-      const rect = svg.getBoundingClientRect();
-      const midX = (a.x + b.x) / 2 - rect.left;
-      const midY = (a.y + b.y) / 2 - rect.top;
-      applyZoom(pinch.startZoom * (dist / pinch.startDist), { x: midX / ui.zoom, y: midY / ui.zoom });
-      gestureEndsAt = Date.now() + 350;
+    const dist = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
+    // pan: keep the drawing glued to the fingers' midpoint, 1:1 — works over
+    // symbols too (one-finger pan there would drag the component instead)
+    if (pinch.mid) {
+      touchWrap.scrollLeft -= midX - pinch.mid.x;
+      touchWrap.scrollTop -= midY - pinch.mid.y;
     }
+    // zoom: spread ratio vs the previous frame, anchored at the current
+    // midpoint — the content between the fingers stays between the fingers.
+    // (Below 2px of change the delta is skipped but pinch.dist still advances,
+    // so slow spreads accumulate losslessly while finger jitter is ignored.)
+    if (pinch.dist && Math.abs(dist - pinch.dist) > 2) {
+      const wrapRect = touchWrap.getBoundingClientRect();
+      applyZoom(ui.zoom * (dist / pinch.dist), { x: midX - wrapRect.left, y: midY - wrapRect.top });
+    }
+    pinch.mid = { x: midX, y: midY };
+    pinch.dist = dist;
+    gestureEndsAt = Date.now() + 350;
   } else if (pan && activePointers.size === 1) {
     touchWrap.scrollLeft = pan.sl - (e.clientX - pan.sx);
     touchWrap.scrollTop = pan.st - (e.clientY - pan.sy);
@@ -1014,10 +1027,22 @@ async function refreshCircuits() {
   } catch { /* offline */ }
 }
 
+// Fit the view once after a circuit load. The SSE frame that announces the
+// loaded circuit can arrive BEFORE the load_circuit response sets pendingFit
+// (server mode), so check immediately when setting it, and again on every state.
+function consumePendingFit() {
+  if (!ui.pendingFit) return;
+  const s = ui.snapshot;
+  if (s && (ui.pendingFit === true || s.circuit === ui.pendingFit) && s.components.length > 0) {
+    ui.pendingFit = null;
+    zoomFit();
+  }
+}
+
 // track loads through the command channel: fit the view to a newly loaded circuit
 window.addEventListener('vl-action', (ev) => {
   const { tool, result } = ev.detail;
-  if (tool === 'load_circuit' && result.ok) ui.pendingFit = result.loaded || true;
+  if (tool === 'load_circuit' && result.ok) { ui.pendingFit = result.loaded || true; consumePendingFit(); }
 });
 
 // ---------- save-as dialog (window.prompt is unavailable on Android WebView) ----------
@@ -1089,6 +1114,12 @@ applyZoom(1);
     getPngDataUrl: pngDataUrl
   });
   refreshCircuits();
+
+  // phones: the palette is a drawer, not a fixed left panel
+  if (window.matchMedia('(max-width: 900px)').matches) {
+    const p = $('#welcome p');
+    if (p) p.innerHTML = 'Tap the <b>☰ components</b> drawer to pick a part, then tap the canvas to place it,<br>or load a worked example from the <b>Circuit ▸ Load selected circuit</b> menu.';
+  }
 
   // resume the circuit that was open last session
   const last = localStorage.getItem('vl-last-circuit');
