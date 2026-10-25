@@ -1,5 +1,10 @@
 # Shipping VoltLab as an Android APK — viability assessment
 
+> **Status update — Tier 1 shipped.** [VoltLab 1.1.0](https://github.com/touhidsiddiqueeraj-bit/VoltLab/releases/tag/v1.1.0)
+> includes `VoltLab-1.1.0.apk`: the operator/demo tier below, wrapped in Capacitor 7,
+> release-signed (v1+v2 schemes), Android 6.0+ (minSdk 23, targetSdk 35), fully
+> offline. Tier 2 (full editor) remains the roadmap item described below.
+
 **Short answer: yes — viable, with two tiers of effort.** The simulator core was
 designed to run without a backend, which is the whole ball game on Android.
 

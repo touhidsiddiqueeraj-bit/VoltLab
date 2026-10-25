@@ -62,6 +62,11 @@ All notable changes to VoltLab are documented here. The format follows
 - **APK viability study** — `docs/apk.md`: the engine already runs fully
   client-side (the Pages demo proves it), so a demo APK is ~half a day via
   Capacitor and the full editor needs one client-side transport bridge.
+- **First Android APK.** `VoltLab-1.1.0.apk` ships with the [v1.1.0 release](https://github.com/touhidsiddiqueeraj-bit/VoltLab/releases/tag/v1.1.0):
+  the operator/demo tier in a Capacitor 7 shell — real engine + renderer fully
+  offline, all five bundled circuits, run/pause/step and the live mimic panel.
+  Release-signed, minSdk 23 (Android 6.0+), targetSdk 35, adaptive launcher
+  icons generated from the app logo.
 
 ### Changed
 

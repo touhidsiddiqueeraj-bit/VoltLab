@@ -110,7 +110,7 @@ contactors and the 3-deck floor cam.*
 | [docs/mcp.md](docs/mcp.md) | Complete 26-tool MCP reference + raw HTTP equivalents + worked agent session |
 | [docs/circuit-format.md](docs/circuit-format.md) | The circuit JSON schema — components, wires, waypoints, demo scripts |
 | [docs/examples.md](docs/examples.md) | Guided tour of every example circuit with scenarios to try |
-| [docs/apk.md](docs/apk.md) | Viability of shipping VoltLab as an Android APK (spoiler: yes, two tiers) |
+| [docs/apk.md](docs/apk.md) | Android APK: **Tier 1 shipped in [v1.1.0](https://github.com/touhidsiddiqueeraj-bit/VoltLab/releases/tag/v1.1.0)**, Tier 2 (full editor) roadmap |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Dev setup, test layout, how to add devices and circuits |
 
 ## Agent control (MCP)
@@ -199,13 +199,15 @@ npm run dist                    # installers for the current OS (electron-builde
 ### Installers & CI
 
 Every push of a `v*` tag (or *Actions → Release → Run workflow*) builds signed-off
-installers on all three desktops and attaches them to a draft GitHub Release:
+installers on all three desktops and attaches them to a draft GitHub Release
+([latest release](https://github.com/touhidsiddiqueeraj-bit/VoltLab/releases/latest)):
 
 | Platform | Artifacts |
 |---|---|
-| Windows | `VoltLab-Setup-x.y.z.exe` (NSIS installer) + `VoltLab-Portable-x.y.z.exe` |
-| macOS | `VoltLab-x.y.z-arm64.dmg` + `VoltLab-x.y.z-x64.dmg` (unsigned — right-click → Open) |
+| Windows | `VoltLab-Setup-x.y.z-x64.exe` (NSIS installer) + `VoltLab-Portable-x.y.z-x64.exe` |
+| macOS | `VoltLab-x.y.z-arm64.dmg` (Apple Silicon) + `VoltLab-x.y.z.dmg` (Intel, x64) — unsigned, right-click → Open |
 | Linux | `VoltLab-x.y.z-x86_64.AppImage` + `voltlab_x.y.z_amd64.deb` |
+| Android | `VoltLab-x.y.z.apk` — offline operator/demo tier ([details](docs/apk.md)), built locally with Capacitor |
 
 Plain `git tag v1.1.0 && git push --tags` is all it takes to cut a release.
 
