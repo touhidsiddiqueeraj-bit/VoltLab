@@ -51,6 +51,56 @@ All notable changes to VoltLab are documented here. The format follows
   passes; http mode, offline mode and the packaged desktop app were all
   re-verified end-to-end.
 
+## [1.3.0] — 2026-10-25
+
+### Added — the operator round
+
+- **Variable frequency drive (`vfd`).** A real speed-controlled drive: powers up on
+  3-phase at L1/L2/L3, runs when FWD-COM or REV-COM see a potential difference, ramps
+  its output frequency toward the speed reference (25 Hz/s default), and synthesizes
+  its own rotating field on U/V/W — forward or reversed by swapping two synthetic
+  phases, like a real drive. Motors fed by a drive now scale their speed target to
+  the drive's frequency, so a drive at 15 Hz genuinely turns the load at 30 %. Both
+  direction inputs at once = fault. Commanding both directions mid-drive plugs the
+  motor through zero, exactly like mains reversing.
+- **Accelerator (`pedal`) and service brake (`brake`).** Analog pedals, 0–100 %.
+  The accelerator's R+/R- terminals emit an analog reference onto the net (like a
+  0–10 V signal) that the VFD reads as its speed input, and its 13-14 pole is a
+  pedal-start interlock (closes above a 5 % cutoff — no foot, no drive). The brake's
+  NC pole 11-12 cuts the drive command when pressed, its NO pole 13-14 lights the
+  brake lamps, and it mechanically decelerates the motor it is bound to — fighting
+  the drive pulls extra current, coasting just stops the wheels.
+- **Emergency stop (`estop`).** The classic red mushroom: maintained NC pole 11-12
+  plus NO aux 13-14 for trip signalling, twist-to-release, clickable on the canvas
+  and in the console.
+- **3-position selector (`selector3`).** COM routes to nothing / P1 / P2 — for
+  FWD-OFF-REV direction selectors or Hand-Off-Auto duty.
+- **Elevator operator devices.** `floorselector` — a car operating panel that closes
+  COM-<floor> per selection (parallel-friendly with hall buttons); `floordisplay` —
+  a 7-segment floor indicator with up/down travel arrows, driven by real wiring;
+  and the floor cam gained an **isolated indicator deck** (ICOM-IF1..10) so a display
+  can be wired up without backfeeding the control logic.
+- **Operator console.** The bottom bar is now device-driven: it grows hold-to-press
+  buttons, a big e-stop mushroom, drag-able throttle/brake pedal sliders (keyboard
+  accessible), VFD Hz + direction readouts, a floor indicator with arrows, car-call
+  grids and move-the-car demo buttons, alongside the existing motor discs — whatever
+  the circuit contains.
+- **Two new worked examples.** `vehicle-drive` (EV/truck traction: VFD + pedals +
+  key + F/R selector + e-stop + brake lights) and `elevator-cop` (the 10-story
+  machine with a car operating panel, floor indicator and e-stop) — 18 new tests in
+  `test/features.test.mjs` covering drive scaling, plugging, mechanical braking,
+  dead-man interlock, held car calls and e-stop behavior (57 total).
+- **Three new MCP tools:** `set_pedal` (analog pedal travel), `set_floor` (register
+  car calls) and `set_selector` (multi-position selectors incl. cam10); `set_switch`
+  now trips/releases e-stops.
+
+### Changed
+
+- `sequenceDir` generalized: rotation direction is derived from the cyclic order of
+  any three distinct phase labels (mains L1-L2-L3 or a drive's synthetic field),
+  with neutral explicitly excluded — mains-fed motors behave exactly as before.
+
+
 ## [1.1.0] — 2026-10-25
 
 ### Fixed

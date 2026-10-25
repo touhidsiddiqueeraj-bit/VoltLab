@@ -8,9 +8,13 @@
 
 A minimal, cross-platform simulator for **electromechanical motor-control circuits** —
 DOL starters, interlocks, seal-in logic, on-delay sequencing, reversing starters, even a
-full 10-story relay elevator. Place contactors, thermal overloads, push buttons, lamps and
-3-phase motors on a schematic, wire them terminal-by-terminal, and watch the live
-simulation: phase-colored wires, inrush current, overload trips, coast-down.
+full 10-story relay elevator with a car operating panel. Place contactors, thermal
+overloads, push buttons, lamps and 3-phase motors on a schematic, wire them
+terminal-by-terminal, and watch the live simulation: phase-colored wires, inrush current,
+overload trips, coast-down. Drive it like a machine: a **variable frequency drive** with an
+**accelerator pedal** and **service brake** for vehicle designs, **e-stop mushrooms**,
+floor indicators and car-call panels for elevator designs — all real electrical devices,
+not decoration.
 
 And the twist: the whole app is **agent-controllable over MCP** — an LLM agent can build,
 wire, break, fault, document and film circuits entirely through tool calls.
@@ -31,10 +35,17 @@ https://github.com/touhidsiddiqueeraj-bit/VoltLab/raw/main/docs/media/dol-starte
 - **Live physics, not animation** — a real per-tick solver: union-find netlists, phase
   propagation, 6× FLC inrush, class-10 thermal trip curves, single-phasing after phase
   loss, motor coast-down, fuse blowing on short circuit.
-- **16 device types** with IEC-style SVG symbols drawn in-phase-colors: supplies,
+- **23 device types** with IEC-style SVG symbols drawn in-phase-colors: supplies,
   breakers, fuses, contactors (main + NO/NC aux + coil), thermal overloads (95-96 / 97-98),
-  on-delay timers, NO/NC push buttons, selectors, lamps, buzzer, floor cams, junctions.
-- **MCP agent layer** — 26 tools over stdio JSON-RPC or plain HTTP. Point Claude/ZCode/any
+  on-delay timers, NO/NC push buttons, selectors (2- and 3-position), **e-stop**,
+  **accelerator/brake pedals**, **variable frequency drive** (synthesized rotating field,
+  frequency ramp, FWD/REV inputs), lamps, buzzer, **floor indicators**,
+  **car-call panels**, 4-deck floor cams, junctions.
+- **Operator console** — the bottom panel is device-driven: it grows real controls for
+  whatever the circuit contains: hold-to-press buttons, drag-able throttle/brake pedals,
+  drive Hz + direction readouts, a floor indicator with travel arrows, car-call grids,
+  move-the-car demo buttons and a big e-stop mushroom.
+- **MCP agent layer** — 29 tools over stdio JSON-RPC or plain HTTP. Point Claude/ZCode/any
   MCP client at it and it runs the panel like a virtual training bench.
 - **Self-documenting exports** — the app produces an IEC 61082-1-style multi-sheet PDF
   drawing set (zone grids, title blocks, sheet index) and a scripted 720p demo video of
@@ -82,8 +93,9 @@ to place; click two terminals to wire. The 🎓 button starts the interactive tu
 
 ## Example circuits
 
-Five worked examples ship in [`circuits/`](circuits/) — each validated headlessly in
-[`test/examples.test.mjs`](test/examples.test.mjs). Ideas, wiring walk-throughs and
+Seven worked examples ship in [`circuits/`](circuits/) — each validated headlessly in
+[`test/examples.test.mjs`](test/examples.test.mjs) and
+[`test/features.test.mjs`](test/features.test.mjs). Ideas, wiring walk-throughs and
 exercises per circuit live in [`docs/examples.md`](docs/examples.md).
 
 | Circuit | What it demonstrates |
@@ -92,7 +104,9 @@ exercises per circuit live in [`docs/examples.md`](docs/examples.md).
 | `reversing-starter` | Forward/reverse contactors, phase-swap wiring, electrical interlock that makes simultaneous energizing impossible |
 | `timer-sequence` | On-delay timer starts a second conveyor motor 3 s after the first |
 | `elevator-2floor` | Call latching for up/down contactors, travel limits, NC cross-interlock, hoist overload |
-| `elevator-10floor` | **Full 10-story relay elevator**: 3-deck floor cam = car position, per-floor call relays K1–K10, auto-reset via complement decks, dispatch chain with dwell timer, reversing contactors with phase swap + NC cross-interlock — 46 components, 174 wires |
+| `elevator-10floor` | **Full 10-story relay elevator**: 4-deck floor cam = car position, per-floor call relays K1–K10, auto-reset via complement decks, dispatch chain with dwell timer, reversing contactors with phase swap + NC cross-interlock — 46 components, 174 wires |
+| `vehicle-drive` | **Electric vehicle drive**: VFD with synthesized rotating field, accelerator pedal as analog speed reference (drag it in the console), service brake with NC drive interlock + mechanical deceleration + brake lamps, key switch, FWD/OFF/REV selector, pedal dead-man interlock, e-stop |
+| `elevator-cop` | **Elevator with car operating panel**: the 10-story machine plus a car-call panel (floorselector), a floor indicator with up/down travel arrows (floordisplay + the cam's isolated indicator deck) and an e-stop in the control feed |
 
 ![The 10-story relay elevator circuit](docs/media/elevator-10floor.png)
 
@@ -107,7 +121,7 @@ contactors and the 3-deck floor cam.*
 |---|---|
 | [Live demo](https://touhidsiddiqueeraj-bit.github.io/VoltLab/) | The real engine running on GitHub Pages — no install |
 | [docs/architecture.md](docs/architecture.md) | How the engine, host, UI and MCP layer fit together; the solver model; design constraints |
-| [docs/mcp.md](docs/mcp.md) | Complete 26-tool MCP reference + raw HTTP equivalents + worked agent session |
+| [docs/mcp.md](docs/mcp.md) | Complete 29-tool MCP reference + raw HTTP equivalents + worked agent session |
 | [docs/circuit-format.md](docs/circuit-format.md) | The circuit JSON schema — components, wires, waypoints, demo scripts |
 | [docs/examples.md](docs/examples.md) | Guided tour of every example circuit with scenarios to try |
 | [docs/apk.md](docs/apk.md) | VoltLab on Android — **Tier 1 + Tier 2 shipped**: operator demo (1.1.0) and the full offline editor (1.2.0) |
@@ -136,12 +150,12 @@ status and this exact config, ready to copy:
 
 ![MCP status panel with ready-to-paste client config](docs/media/mcp-panel.png)
 
-A taste of the 26 tools (full reference in [docs/mcp.md](docs/mcp.md)):
+A taste of the 29 tools (full reference in [docs/mcp.md](docs/mcp.md)):
 
 | Group | Tools |
 |---|---|
 | Build | `add_component`, `connect`, `disconnect`, `move_component`, `remove_component`, `list_terminals` |
-| Operate | `press_button`, `release_button`, `set_switch`, `set_position`, `set_param` |
+| Operate | `press_button`, `release_button`, `set_switch`, `set_selector`, `set_pedal`, `set_position`, `set_floor`, `set_param` |
 | Break | `inject_fault` (phase_loss / overload / stall / short_circuit), `clear_fault`, `replace_fuses`, `reset_overload` |
 | Observe | `get_state`, `list_components`, `list_wires`, `get_log`, `sim_control` (run/pause/step/advance/reset) |
 | Library | `load_circuit`, `save_circuit`, `clear_circuit` |
@@ -188,7 +202,7 @@ perform the action.
 ## Tests & packaging
 
 ```bash
-npm test                        # engine + example-circuit tests + local-host tests + MCP end-to-end (39 tests)
+npm test                        # engine + circuit + local-host tests + MCP end-to-end (57 tests)
 node --test test/dol.test.mjs   # just the DOL physics scenario (14 tests)
 npm start -- --smoke            # Electron headless self-test → prints SMOKE OK
 npm start -- --screenshot=out.png   # load demo, capture PNG, exit
@@ -226,7 +240,7 @@ server.js         dependency-free HTTP host: static app/, /api/*, SSE state stre
 app/              the web UI (IEC SVG symbols, palette, wiring, inspector, log drawer)
 electron/main.mjs Electron shell (+ --smoke / --screenshot / --headless / --check modes)
 mcp/server.mjs    MCP stdio server → proxies tools/call to the HTTP API
-circuits/         circuit library (5 examples, JSON)
+circuits/         circuit library (7 examples, JSON)
 scripts/          generator for the 10-floor elevator circuit + demo-page sync
 test/             engine tests + example-circuit tests + MCP end-to-end
 docs/             GitHub Pages site: landing page + live demo + deep-dive docs

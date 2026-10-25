@@ -173,20 +173,123 @@ export const DEVICE_TYPES = {
     desc: 'Audible alarm. On when its terminals see different phases.'
   },
 
+  estop: {
+    label: 'Emergency Stop',
+    group: 'Control',
+    defaults: { label: 'SE1', color: '#e3342f' },
+    state: { pressed: false },
+    size: { w: 110, h: 130 },
+    terminals: {
+      11: { x: 20, y: 0 }, 12: { x: 20, y: 120 },
+      13: { x: 80, y: 0 }, 14: { x: 80, y: 120 }
+    },
+    desc: 'Emergency stop mushroom. Maintained NC pole 11-12 (opens while tripped, killing the control circuit) + NO aux 13-14 (trip signalling). Twist to release.'
+  },
+
+  selector3: {
+    label: 'Selector Switch 3-Pos',
+    group: 'Control',
+    defaults: { label: 'S3' },
+    size: { w: 60, h: 90 },
+    terminals: { COM: { x: 30, y: 0 }, P1: { x: 30, y: 80 }, P2: { x: 52, y: 80 } },
+    state: { pos: '0' },
+    desc: 'Maintained 3-position selector: 0 = all open, I = COM-P1 closed, II = COM-P2 closed. FWD/OFF/REV or Hand/Off/Auto.'
+  },
+
+  pedal: {
+    label: 'Accelerator Pedal',
+    group: 'Control',
+    defaults: { label: 'P1', color: '#4fc3f7' },
+    state: { value: 0 },
+    size: { w: 90, h: 150 },
+    terminals: {
+      13: { x: 20, y: 0 }, 14: { x: 20, y: 140 },
+      'R+': { x: 70, y: 30 }, 'R-': { x: 70, y: 120 }
+    },
+    params: { cutoff: { value: 0.05, unit: 'x', desc: 'Pole 13-14 closes above this travel' } },
+    desc: 'Analog accelerator pedal, 0..100% travel. Pole 13-14 closes above the cutoff (pedal-start interlock); R+/R- emit a 0-100% analog reference — wire them to a VFD speed input.'
+  },
+
+  brake: {
+    label: 'Brake Pedal',
+    group: 'Control',
+    defaults: { label: 'P2', color: '#e3342f' },
+    state: { value: 0 },
+    size: { w: 90, h: 150 },
+    terminals: {
+      11: { x: 20, y: 0 }, 12: { x: 20, y: 55 },
+      13: { x: 20, y: 95 }, 14: { x: 20, y: 140 }
+    },
+    params: { motor: { value: 0, unit: 'id', desc: 'Motor id the brake mechanically acts on (0 = none)' } },
+    desc: 'Service brake pedal, 0..100%. NC pole 11-12 opens when pressed (cuts the drive), NO pole 13-14 closes (brake lamps); also mechanically decelerates the bound motor.'
+  },
+
+  vfd: {
+    label: 'VFD (Variable Frequency Drive)',
+    group: 'Switching',
+    defaults: { label: 'U1' },
+    state: { freq: 0, running: false, dir: 0, fault: '' },
+    size: { w: 180, h: 200 },
+    terminals: {
+      L1: { x: 30, y: 0 }, L2: { x: 60, y: 0 }, L3: { x: 90, y: 0 },
+      U: { x: 30, y: 198 }, V: { x: 60, y: 198 }, W: { x: 90, y: 198 },
+      FWD: { x: 160, y: 40 }, REV: { x: 160, y: 80 }, COM: { x: 160, y: 120 },
+      'R+': { x: 130, y: 0 }, 'R-': { x: 150, y: 0 }
+    },
+    params: {
+      base: { value: 50, unit: 'Hz', desc: 'Base (max output) frequency' },
+      ramp: { value: 25, unit: 'Hz/s', desc: 'Frequency ramp rate' },
+      min_freq: { value: 1.5, unit: 'Hz', desc: 'Output below this = stop' },
+      ref: { value: 0, unit: 'x', desc: 'Manual speed reference 0..1 (used when no pedal is wired)' }
+    },
+    desc: 'Variable frequency drive. Powers up on 3-phase at L1/L2/L3; runs when FWD-COM or REV-COM see a potential difference, at the speed set by the R+/R- analog reference (or the manual ref param). Generates its own rotating field on U/V/W — swap direction with FWD/REV. Both directions at once = fault.'
+  },
+
+  floorselector: {
+    label: 'Floor Selector (Car Calls)',
+    group: 'Control',
+    defaults: { label: 'CS1' },
+    state: { floor: 0 },
+    size: { w: 170, h: 330 },
+    params: { floors: { value: 10, unit: 'n', desc: 'Highest served floor (2..10)' } },
+    desc: 'Car operating panel: maintained floor selection. Selecting floor k closes COM-k (registers the car call); selecting again cancels (0 = no call).'
+      + ' Terminals: COM + one NO contact per floor.',
+    terminals: (() => {
+      const t = { COM: { x: 20, y: 30 } };
+      for (let i = 1; i <= 10; i++) t[String(i)] = { x: 100, y: 70 + (i - 1) * 26 };
+      return t;
+    })()
+  },
+
+  floordisplay: {
+    label: 'Floor Indicator Display',
+    group: 'Signalling',
+    defaults: { label: 'FD1', color: '#ffb454' },
+    state: { floor: 0, up: false, down: false },
+    size: { w: 150, h: 140 },
+    desc: 'Car/hall floor indicator: 7-segment digit + up/down arrows. Wire the floor number inputs (1..10, e.g. from a floor cam F-deck) against return N; digit shows the energized input. U/D inputs light the travel arrows.',
+    terminals: (() => {
+      const t = { U: { x: 15, y: 0 }, D: { x: 35, y: 0 }, N: { x: 135, y: 0 } };
+      for (let i = 1; i <= 10; i++) t[String(i)] = { x: 55 + (i - 1) * 8, y: 138 };
+      return t;
+    })()
+  },
+
   cam10: {
-    label: 'Floor Cam (10-Pos, 3-Deck)',
+    label: 'Floor Cam (10-Pos, 4-Deck)',
     group: 'Control',
     defaults: { label: 'CAM1' },
     state: { position: 1 },
-    size: { w: 240, h: 400 },
-    desc: 'Three-deck rotary floor cam = car position. Deck A: COM-F(position). Decks B/C: G(n)-GH(n) and H(n)-HH(n) close for every floor EXCEPT the current one (per-floor isolation contacts). Advance with set_position.',
+    size: { w: 300, h: 400 },
+    desc: 'Four-deck rotary floor cam = car position. Deck A: COM-F(position). Decks B/C: G(n)-GH(n) and H(n)-HH(n) close for every floor EXCEPT the current one (per-floor isolation contacts). Deck D: ICOM-IF(position) — an isolated indicator deck, so a floor display wired there can never backfeed the control decks. Advance with set_position.',
     terminals: (() => {
-      const t = { COM: { x: 20, y: 30 } };
+      const t = { COM: { x: 20, y: 30 }, ICOM: { x: 270, y: 30 } };
       for (let i = 1; i <= 10; i++) t[`F${i}`] = { x: 20, y: 70 + (i - 1) * 33 };
       for (let i = 1; i <= 10; i++) t[`G${i}`] = { x: 95, y: 70 + (i - 1) * 33 };
       for (let i = 1; i <= 10; i++) t[`GH${i}`] = { x: 130, y: 70 + (i - 1) * 33 };
       for (let i = 1; i <= 10; i++) t[`H${i}`] = { x: 165, y: 70 + (i - 1) * 33 };
       for (let i = 1; i <= 10; i++) t[`HH${i}`] = { x: 210, y: 70 + (i - 1) * 33 };
+      for (let i = 1; i <= 10; i++) t[`IF${i}`] = { x: 270, y: 70 + (i - 1) * 33 };
       return t;
     })()
   },

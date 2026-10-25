@@ -1,6 +1,6 @@
 # MCP tool reference
 
-VoltLab exposes its full control surface as **26 MCP tools**. The catalog lives in
+VoltLab exposes its full control surface as **29 MCP tools**. The catalog lives in
 [`sim/api.js`](../sim/api.js) (`TOOLS`) — the same dispatcher serves the HTTP API, so
 everything here also works as plain JSON-over-HTTP without any MCP client.
 
@@ -41,7 +41,7 @@ Then register the stdio bridge:
 
 | Tool | Args | Notes |
 |---|---|---|
-| `add_component` | `type` (required), `id?`, `label?`, `x?`, `y?`, `params?` | Types: `supply3, breaker3, breaker1, fuse3, fuse1, contactor, overload, motor3, pushbutton_no, pushbutton_nc, selector2, timer_on, lamp, buzzer, cam10, junction` |
+| `add_component` | `type` (required), `id?`, `label?`, `x?`, `y?`, `params?` | Types: `supply3, breaker3, breaker1, fuse3, fuse1, contactor, vfd, overload, motor3, pushbutton_no, pushbutton_nc, selector2, selector3, timer_on, estop, pedal, brake, lamp, buzzer, floorselector, floordisplay, cam10, junction` |
 | `remove_component` | `id` | Removes attached wires too |
 | `move_component` | `id`, `x`, `y` | |
 | `list_components` | — | id / type / label of everything placed |
@@ -56,9 +56,12 @@ Then register the stdio bridge:
 |---|---|---|
 | `press_button` | `id` | Momentary — **stays held** until `release_button` |
 | `release_button` | `id` | |
-| `set_switch` | `id`, `closed` | Breakers on/off, selector I/0 |
+| `set_switch` | `id`, `closed` | Breakers on/off, selector I/0, **e-stop healthy/tripped** (`closed:false` = trip) |
+| `set_selector` | `id`, `position` | `selector3` 0/1/2 (REV/OFF/FWD style), `floorselector` floor number, `cam10` 1..10 |
+| `set_pedal` | `id`, `value` (0..1) | Accelerator or brake travel — feeds a VFD speed reference / applies the service brake |
 | `set_position` | `id`, `position` (1..10) | Moves a `cam10` floor cam (elevator car) |
-| `set_param` | `id`, `param`, `value` | e.g. motor `flc`/`load`, overload `flc`/`trip_class`, timer `delay`, fuse `rating` |
+| `set_floor` | `id`, `floor` | Registers a car call on a `floorselector` (0 = cancel) |
+| `set_param` | `id`, `param`, `value` | e.g. motor `flc`/`load`, overload `flc`/`trip_class`, timer `delay`, VFD `base`/`ramp`/`ref`, fuse `rating` |
 
 ### Break things (fault injection)
 

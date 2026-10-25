@@ -107,12 +107,15 @@ function updateStatus(s) {
   $('#st-faults').textContent = faults.length ? `FAULTS: ${faults.join(', ')}` : '';
 }
 
-// ---------- operator panel: round mimic buttons + motor rotation display ----------
-// Rebuilt only when the circuit's button/motor set changes (signature check), so the
+// ---------- operator console: mimic buttons, pedals, drives, car panel, motors ----------
+// Rebuilt only when the circuit's device set changes (signature check), so the
 // press targets are stable across the 10 Hz status updates.
 let mimicSig = null;
 let mimicHeld = null;
 const mimicStallSince = new Map();
+const pedalLocal = new Map();   // pedal id -> locally dragged value (until snapshot confirms)
+const pedalSentAt = new Map();  // throttle set_pedal traffic while dragging
+let pedalDragging = null;       // { id, trackEl } while a pedal is being dragged
 
 function mimicRole(c) {
   const rest = c.label.startsWith(c.id) ? c.label.slice(c.id.length).trim() : c.label;
@@ -121,18 +124,82 @@ function mimicRole(c) {
 
 function updateMimic(s) {
   const rel = s.components.filter(c =>
-    c.type === 'pushbutton_no' || c.type === 'pushbutton_nc' || c.type === 'motor3');
-  const sig = rel.map(c => `${c.id}:${c.type}:${c.label}`).join('|');
+    c.type === 'pushbutton_no' || c.type === 'pushbutton_nc' || c.type === 'motor3' ||
+    c.type === 'estop' || c.type === 'pedal' || c.type === 'brake' || c.type === 'vfd' ||
+    c.type === 'floorselector' || c.type === 'floordisplay' || c.type === 'cam10');
+  const sig = rel.map(c => `${c.id}:${c.type}:${c.label}:${c.type === 'floorselector' ? (c.params.floors ?? 10) : ''}`).join('|');
   if (sig !== mimicSig) {
     mimicSig = sig;
-    const btns = rel.filter(c => c.type !== 'motor3');
-    const motors = rel.filter(c => c.type === 'motor3');
+    const byType = (t) => rel.filter(c => c.type === t);
+    const btns = rel.filter(c => c.type === 'pushbutton_no' || c.type === 'pushbutton_nc');
+    const motors = byType('motor3');
+
     $('#mimic-buttons').innerHTML = btns.map(c => `
       <div class="mimic-btn-wrap">
         <button class="mimic-btn ${c.type === 'pushbutton_nc' ? 'nc' : 'no'}" data-mimic="${c.id}"
                 aria-label="hold ${escapeHtml(c.label)}"><span>${c.id}</span></button>
         <span class="mimic-cap" title="${escapeHtml(c.label)}">${escapeHtml(mimicRole(c))}</span>
       </div>`).join('') || '<span class="mimic-empty">no push buttons</span>';
+
+    const estops = byType('estop');
+    $('#mg-estop').hidden = estops.length === 0;
+    $('#mimic-estops').innerHTML = estops.map(c => `
+      <div class="mimic-btn-wrap">
+        <button class="estop-btn" data-mestop="${c.id}" aria-label="emergency stop ${escapeHtml(c.label)}"><span>STOP</span></button>
+        <span class="mimic-cap">${escapeHtml(c.label)}</span>
+      </div>`).join('');
+
+    const pedals = [...byType('pedal'), ...byType('brake')];
+    $('#mg-pedals').hidden = pedals.length === 0;
+    $('#mimic-pedals').innerHTML = pedals.map(c => `
+      <div class="pedal-widget" data-pedal-widget="${c.id}">
+        <div class="pedal-track ${c.type === 'brake' ? 'brk' : 'acc'}" data-pedal-track="${c.id}" role="slider"
+             aria-label="${c.type === 'brake' ? 'brake' : 'throttle'} ${escapeHtml(c.label)}" tabindex="0"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="pedal-fill"></div>
+          <div class="pedal-knob"></div>
+        </div>
+        <span class="pedal-id">${c.id}</span>
+        <span class="pedal-val">0%</span>
+      </div>`).join('');
+
+    const elev = [...byType('floorselector'), ...byType('floordisplay'), ...byType('cam10')];
+    $('#mg-elevator').hidden = elev.length === 0;
+    const fsel = byType('floorselector')[0];
+    const cam = byType('cam10')[0];
+    const floors = fsel ? Math.min(10, Math.max(2, fsel.params.floors ?? 10)) : (cam ? 10 : 0);
+    let elevHtml = '';
+    if (elev.length) {
+      elevHtml += `<div class="car-display" data-car-display>
+          <span class="car-arrow up" data-car-up>▲</span>
+          <span class="car-digit" data-car-digit>&nbsp;</span>
+          <span class="car-arrow down" data-car-down>▼</span>
+        </div>`;
+    }
+    if (fsel) {
+      elevHtml += `<div class="car-calls">` + Array.from({ length: floors }, (_, i) => i + 1).map(f => `
+          <button class="car-call" data-carcall="${fsel.id}:${f}">${f}</button>`).join('') + `</div>`;
+    }
+    if (cam) {
+      // simulate the hoist: move the car position (kept alongside real car calls,
+      // because something still has to advance the floor cam between floors)
+      elevHtml += `<div class="car-calls demo">` + Array.from({ length: floors }, (_, i) => i + 1).map(f => `
+          <button class="car-call demo" data-carmove="${cam.id}:${f}" title="move the car to floor ${f} (demo)">${f}</button>`).join('')
+        + `<span class="car-note">move car</span></div>`;
+    }
+    $('#mimic-elevator').innerHTML = elevHtml;
+
+    const drives = byType('vfd');
+    $('#mg-drives').hidden = drives.length === 0;
+    $('#mimic-drives').innerHTML = drives.map(c => `
+      <div class="mimic-motor" data-mdrive="${c.id}">
+        <span class="drive-freq">0.0<span class="hz">Hz</span></span>
+        <span class="mimic-mot-meta">
+          <span class="mimic-mot-id">${escapeHtml(c.id)}</span>
+          <span class="mimic-mot-state">off</span>
+        </span>
+      </div>`).join('');
+
     $('#mimic-motors').innerHTML = motors.map(c => `
       <div class="mimic-motor" data-mmotor="${c.id}">
         <span class="mimic-disc"><span class="rotor"><i></i></span></span>
@@ -148,6 +215,34 @@ function updateMimic(s) {
     if (c.type === 'pushbutton_no' || c.type === 'pushbutton_nc') {
       const el = document.querySelector(`[data-mimic="${c.id}"]`);
       if (el) el.classList.toggle('pressed', !!c.state.pressed);
+    } else if (c.type === 'estop') {
+      const el = document.querySelector(`[data-mestop="${c.id}"]`);
+      if (el) el.classList.toggle('tripped', !!c.state.pressed);
+    } else if (c.type === 'pedal' || c.type === 'brake') {
+      const widget = document.querySelector(`[data-pedal-widget="${c.id}"]`);
+      if (!widget) continue;
+      const local = pedalDragging?.id === c.id ? pedalLocal.get(c.id) : undefined;
+      const v = local !== undefined ? local : (c.state.value || 0);
+      const track = widget.querySelector('.pedal-track');
+      const fill = widget.querySelector('.pedal-fill');
+      const knob = widget.querySelector('.pedal-knob');
+      const valEl = widget.querySelector('.pedal-val');
+      fill.style.height = `${Math.round(v * 100)}%`;
+      knob.style.bottom = `calc(${Math.round(v * 100)}% - 9px)`;
+      valEl.textContent = `${Math.round(v * 100)}%`;
+      valEl.classList.toggle('on', v > 0.02);
+      track.setAttribute('aria-valuenow', Math.round(v * 100));
+    } else if (c.type === 'vfd') {
+      const wrap = document.querySelector(`[data-mdrive="${c.id}"]`);
+      if (!wrap) continue;
+      const freqEl = wrap.querySelector('.drive-freq');
+      const stateEl = wrap.querySelector('.mimic-mot-state');
+      freqEl.firstChild.textContent = (c.state.freq || 0).toFixed(1);
+      let cls = '', txt = 'off';
+      if (c.state.fault) { cls = 'stall'; txt = 'FAULT'; }
+      else if (c.state.running) { cls = 'run'; txt = c.state.dir > 0 ? 'forward' : 'reverse'; }
+      stateEl.className = `mimic-mot-state ${cls}`;
+      stateEl.textContent = txt;
     } else if (c.type === 'motor3') {
       const wrap = document.querySelector(`[data-mmotor="${c.id}"]`);
       if (!wrap) continue;
@@ -181,6 +276,47 @@ function updateMimic(s) {
       stateEl.textContent = Math.abs(sp) > 0.01 ? `${txt} · ${Math.round(Math.abs(sp) * 100)} %` : txt;
     }
   }
+
+  // ---- car display (floor indicator) ----
+  const digitEl = document.querySelector('[data-car-digit]');
+  if (digitEl) {
+    const fds = s.components.filter(c => c.type === 'floordisplay');
+    const cams = s.components.filter(c => c.type === 'cam10');
+    let floor = null, up = false, down = false;
+    if (fds.length) {
+      floor = fds[0].state.floor ?? 0;
+      up = !!fds[0].state.up; down = !!fds[0].state.down;
+    } else if (cams.length) {
+      floor = cams[0].state.position ?? 0;
+    }
+    if (floor !== null) {
+      const motors = s.components.filter(c => c.type === 'motor3');
+      const running = motors.find(c => Math.abs(c.state.speed || 0) > 0.05);
+      if (!fds.length && running) { up = (running.state.speed || 0) > 0; down = !up; }
+      digitEl.textContent = floor === -1 ? 'E' : (floor === 0 ? '\u00a0' : String(floor));
+      digitEl.classList.toggle('lit', floor !== 0);
+    }
+    const upEl = document.querySelector('[data-car-up]');
+    const dnEl = document.querySelector('[data-car-down]');
+    if (upEl) upEl.classList.toggle('lit', up);
+    if (dnEl) dnEl.classList.toggle('lit', down);
+  }
+
+  // ---- car call buttons ----
+  const fsel = s.components.find(c => c.type === 'floorselector');
+  if (fsel) {
+    document.querySelectorAll('[data-carcall]').forEach(b => {
+      const f = Number(b.dataset.carcall.split(':')[1]);
+      b.classList.toggle('lit', fsel.state.floor === f);
+    });
+  }
+  const cam2 = s.components.find(c => c.type === 'cam10');
+  if (cam2) {
+    document.querySelectorAll('[data-carmove]').forEach(b => {
+      const f = Number(b.dataset.carmove.split(':')[1]);
+      b.classList.toggle('lit', cam2.state.position === f);
+    });
+  }
 }
 
 // panel buttons behave like the physical ones: hold to press, release anywhere
@@ -200,6 +336,79 @@ const releaseMimicHeld = () => {
 };
 window.addEventListener('pointerup', releaseMimicHeld);
 window.addEventListener('pointercancel', releaseMimicHeld);
+
+// ---- e-stop mushroom: click trips it; click again twist-releases ----
+function toggleEstop(id) {
+  const c = ui.snapshot?.components.find(x => x.id === id);
+  if (!c) return;
+  cmd('set_switch', { id, closed: !!c.state.pressed }); // pressed → release (closed)
+}
+$('#mimic-panel').addEventListener('click', (e) => {
+  const stop = e.target.closest?.('[data-mestop]');
+  if (stop) { toggleEstop(stop.dataset.mestop); return; }
+  const call = e.target.closest?.('[data-carcall]');
+  if (call) {
+    const [id, f] = call.dataset.carcall.split(':');
+    const c = ui.snapshot?.components.find(x => x.id === id);
+    if (c) cmd('set_floor', { id, floor: c.state.floor === Number(f) ? 0 : Number(f) }); // toggle
+    return;
+  }
+  const move = e.target.closest?.('[data-carmove]');
+  if (move) {
+    const [id, f] = move.dataset.carmove.split(':');
+    cmd('set_position', { id, position: Number(f) });
+  }
+});
+
+// ---- analog pedal sliders: drag the knob like a real pedal ----
+function pedalFromEvent(track, clientY) {
+  const r = track.getBoundingClientRect();
+  return Math.max(0, Math.min(1, (r.bottom - clientY) / r.height));
+}
+function sendPedal(id, value, final = false) {
+  const now = performance.now();
+  if (!final && now - (pedalSentAt.get(id) || 0) < 90) return;
+  pedalSentAt.set(id, now);
+  pedalLocal.set(id, value);
+  cmd('set_pedal', { id, value });
+}
+$('#mimic-pedals').addEventListener('pointerdown', (e) => {
+  const track = e.target.closest?.('[data-pedal-track]');
+  if (!track) return;
+  e.preventDefault();
+  pedalDragging = { id: track.dataset.pedalTrack, track };
+  track.setPointerCapture?.(e.pointerId);
+  sendPedal(pedalDragging.id, pedalFromEvent(track, e.clientY), true);
+});
+window.addEventListener('pointermove', (e) => {
+  if (!pedalDragging) return;
+  sendPedal(pedalDragging.id, pedalFromEvent(pedalDragging.track, e.clientY));
+});
+const endPedalDrag = () => {
+  if (!pedalDragging) return;
+  const { id } = pedalDragging;
+  pedalDragging = null;
+  sendPedal(id, pedalLocal.get(id) ?? 0, true);
+  setTimeout(() => pedalLocal.delete(id), 500); // let the snapshot confirm
+};
+window.addEventListener('pointerup', endPedalDrag);
+window.addEventListener('pointercancel', endPedalDrag);
+// keyboard: focus a pedal track, press up/down to feather it
+$('#mimic-pedals').addEventListener('keydown', (e) => {
+  const track = e.target.closest?.('[data-pedal-track]');
+  if (!track) return;
+  const id = track.dataset.pedalTrack;
+  const c = ui.snapshot?.components.find(x => x.id === id);
+  const v = pedalLocal.get(id) ?? (c?.state.value || 0);
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    e.preventDefault();
+    const step = e.shiftKey ? 0.25 : 0.05;
+    sendPedal(id, Math.max(0, Math.min(1, v + (e.key === 'ArrowUp' ? step : -step))), true);
+  } else if (e.key === 'Home' || e.key === 'End') {
+    e.preventDefault();
+    sendPedal(id, e.key === 'End' ? 0 : 1, true);
+  }
+});
 
 function renderLog(s) {
   const last = s.log[s.log.length - 1];
@@ -345,6 +554,17 @@ function renderInspector() {
   if (c.type === 'breaker3' || c.type === 'breaker1' || c.type === 'selector2') {
     actions.push(`<button data-act="toggle" data-comp="${c.id}">${c.state.closed || c.state.pos === '1' ? 'Open' : 'Close'}</button>`);
   }
+  if (c.type === 'selector3') {
+    actions.push(`<button data-act="sel3" data-comp="${c.id}" data-pos="0">0</button>` +
+                 `<button data-act="sel3" data-comp="${c.id}" data-pos="1">I</button>` +
+                 `<button data-act="sel3" data-comp="${c.id}" data-pos="2">II</button>`);
+  }
+  if (c.type === 'estop') {
+    actions.push(`<button data-act="estop" data-comp="${c.id}" style="${c.state.pressed ? '' : 'color:var(--bad-text);border-color:var(--bad)'}">${c.state.pressed ? 'Twist-release' : 'TRIP'}</button>`);
+  }
+  if (c.type === 'pedal' || c.type === 'brake') {
+    actions.push(`<input type="range" min="0" max="100" value="${Math.round((c.state.value || 0) * 100)}" data-act="pedal" data-comp="${c.id}" style="width:100px">`);
+  }
   if (c.type === 'overload') {
     actions.push(`<button data-act="resetol" data-comp="${c.id}">Reset</button>`);
   }
@@ -361,12 +581,17 @@ function renderInspector() {
   body.querySelectorAll('input[data-param]').forEach(inp => {
     inp.onchange = () => cmd('set_param', { id: inp.dataset.comp, param: inp.dataset.param, value: Number(inp.value) });
   });
+  body.querySelectorAll('input[data-act="pedal"]').forEach(inp => {
+    inp.oninput = () => cmd('set_pedal', { id: inp.dataset.comp, value: Number(inp.value) / 100 });
+  });
   body.querySelectorAll('button[data-act]').forEach(b => {
     b.onclick = () => {
       const id = b.dataset.comp;
       switch (b.dataset.act) {
         case 'press': cmd(c.state.pressed ? 'release_button' : 'press_button', { id }); break;
         case 'toggle': cmd('set_switch', { id, closed: !(c.state.closed || c.state.pos === '1') }); break;
+        case 'sel3': cmd('set_selector', { id, position: b.dataset.pos }); break;
+        case 'estop': cmd('set_switch', { id, closed: !!c.state.pressed }); break;
         case 'resetol': cmd('reset_overload', { id }); break;
         case 'delete': cmd('remove_component', { id }); ui.selected = null; break;
       }
@@ -414,6 +639,28 @@ svg.addEventListener('pointerdown', (e) => {
   const p = svgPoint(e);
   const resetEl = e.target.closest?.('[data-reset]');
   if (resetEl) { cmd('reset_overload', { id: resetEl.dataset.reset }); return; }
+
+  const estopEl = e.target.closest?.('[data-estop]');
+  if (estopEl) { toggleEstop(estopEl.dataset.estop); return; }
+
+  const copEl = e.target.closest?.('[data-copfloor]');
+  if (copEl) {
+    const [id, f] = copEl.dataset.copfloor.split(':');
+    const c = ui.snapshot?.components.find(x => x.id === id);
+    if (c) cmd('set_floor', { id, floor: c.state.floor === Number(f) ? 0 : Number(f) });
+    return;
+  }
+
+  const sel3El = e.target.closest?.('[data-toggle3]');
+  if (sel3El) {
+    const id = sel3El.dataset.toggle3;
+    const c = ui.snapshot?.components.find(x => x.id === id);
+    if (c) {
+      const next = c.state.pos === '0' ? '1' : c.state.pos === '1' ? '2' : '0';
+      cmd('set_selector', { id, position: next });
+    }
+    return;
+  }
 
   const pressEl = e.target.closest?.('[data-press]');
   if (pressEl) { cmd('press_button', { id: pressEl.dataset.press }); return; }
@@ -725,7 +972,8 @@ function buildLegend() {
 }
 function idleLegendState(type) {
   return { closed: false, energized: false, pressed: false, lit: false, blown: [false, false, false],
-           pos: '0', speed: 0, tripped: false, thermal: 0, done: false, on: false, position: 1 };
+           pos: '0', speed: 0, tripped: false, thermal: 0, done: false, on: false, position: 1,
+           value: 0, floor: 0, up: false, down: false, freq: 0, running: false, dir: 0, fault: '' };
 }
 $('#btn-legend').onclick = () => { closeMenus(); $('#legend-dialog').showModal(); };
 $('#legend-close').onclick = () => $('#legend-dialog').close();

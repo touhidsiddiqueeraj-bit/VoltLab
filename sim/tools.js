@@ -79,8 +79,23 @@ export const TOOLS = [
   },
   {
     name: 'set_switch',
-    description: 'Toggle a breaker or selector switch: closed=true (ON / position I) or false (OFF / position 0).',
-    inputSchema: obj({ id: s('breaker/selector id'), closed: b('true = closed') }, ['id', 'closed'])
+    description: 'Toggle a breaker, selector switch or emergency stop: closed=true (ON / position I / e-stop healthy) or false (OFF / position 0 / e-stop TRIPPED).',
+    inputSchema: obj({ id: s('breaker/selector/estop id'), closed: b('true = closed') }, ['id', 'closed'])
+  },
+  {
+    name: 'set_selector',
+    description: 'Set a multi-position selector: selector3 position 0/1/2 (OFF/I/II — e.g. REV/OFF/FWD), floorselector floor number (0 = cancel the car call), cam10 floor 1..10 (moves the car).',
+    inputSchema: obj({ id: s('selector id'), position: s('position: 0|1|2 for selectors, floor number for car calls') }, ['id', 'position'])
+  },
+  {
+    name: 'set_pedal',
+    description: 'Set an analog pedal position, 0..1 (100% = 1): accelerator (pedal) or service brake (brake). The accelerator feeds a VFD speed reference; the brake also decelerates its bound motor mechanically.',
+    inputSchema: obj({ id: s('pedal/brake id'), value: n('pedal travel 0..1') }, ['id', 'value'])
+  },
+  {
+    name: 'set_floor',
+    description: 'Register a car call on a floor selector (floorselector): closes COM-<floor> in the control circuit. Floor 0 cancels the call.',
+    inputSchema: obj({ id: s('floorselector id'), floor: n('floor number, 0 to cancel') }, ['id', 'floor'])
   },
   {
     name: 'set_position',
@@ -255,6 +270,22 @@ export function createDispatcher({ engine, circuits }) {
       case 'set_switch':
         e.setSwitch(args.id, !!args.closed);
         return { id: args.id, closed: !!args.closed };
+
+      case 'set_selector':
+        e.setSelector(args.id, args.position);
+        return { id: args.id, position: e.components.get(args.id).state.pos ?? e.components.get(args.id).state.floor ?? e.components.get(args.id).state.position };
+
+      case 'set_pedal':
+        e.setPedal(args.id, args.value);
+        return { id: args.id, value: e.components.get(args.id).state.value };
+
+      case 'set_floor': {
+        const c = e.components.get(args.id);
+        if (!c) throw new Error(`no component "${args.id}"`);
+        if (c.type !== 'floorselector') throw new Error(`"${args.id}" is a ${c.type}, not a floor selector`);
+        e.setSelector(args.id, args.floor);
+        return { id: args.id, floor: c.state.floor };
+      }
 
       case 'set_position':
         e.setPosition(args.id, args.position);

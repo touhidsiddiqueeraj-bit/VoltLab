@@ -1,7 +1,8 @@
 # Example circuits
 
-Five worked examples ship in [`circuits/`](../circuits/). Each one is covered by
-headless behavior tests in [`test/examples.test.mjs`](../test/examples.test.mjs) — the
+Seven worked examples ship in [`circuits/`](../circuits/). Each one is covered by
+headless behavior tests in [`test/examples.test.mjs`](../test/examples.test.mjs) and
+[`test/features.test.mjs`](../test/features.test.mjs) — the
 tests assert the *electrical behavior* (what picks up, what trips, what can never
 energize simultaneously), so the examples double as executable documentation of what the
 engine models.
@@ -121,6 +122,62 @@ contactor pick, the dwell at each floor, and the calls extinguish in order.
 
 **Exercise:** trip KK1 mid-run, reset it, and confirm dispatch resumes only after the
 overload is healthy.
+
+---
+
+## vehicle-drive — the operator's bench
+
+An electric-vehicle / industrial-truck traction drive — the first example built around
+the **variable frequency drive** (`vfd`) instead of contactor-on-mains:
+
+- **Power:** X1 → Q1 → F1 → **U1 (VFD)** → M1. The drive synthesizes its own rotating
+  field on U/V/W with a configurable ramp (default 25 Hz/s), so the motor starts softly
+  and follows the drive's frequency — no inrush slam, no overload relay needed (the drive
+  protects itself).
+- **Speed reference:** the **accelerator pedal P1** emits a 0–100 % analog reference on
+  R+/R- straight into the VFD — drag the pedal in the operator console and watch the Hz
+  readout ramp and the motor follow. Its 13-14 pole also acts as a dead-man interlock:
+  no foot, no drive.
+- **Commands:** key switch SK → P1 interlock → **brake NC pole** P2 → 3-position selector
+  SD (**0 = off, I = forward, II = reverse**) → VFD FWD/REV inputs. Switching direction
+  mid-drive genuinely plugs the motor through zero.
+- **Service brake P2:** the NC pole cuts the drive command, the NO pole lights the brake
+  lamps H2/H3, and the pedal mechanically decelerates M1 (bound via its `motor` param) —
+  while fighting the drive it pulls extra current, exactly like real brake-against-drive.
+- **Safety:** the e-stop SE1 kills the control chain (drive output off, coast-down) and
+  lights H4; brake lights stay available even tripped, like a real truck.
+
+**Try it:** key on, SD to I, then drag the throttle to 60 % — watch the drive ramp to
+30 Hz and the motor settle at 60 % speed. Flip SD to II mid-drive for plugging. Stand
+on the brake. Trip the e-stop and twist it back.
+
+**Exercise:** wire a second pedal in parallel with P1's reference — or replace P1's
+analog wiring with the VFD's `ref` parameter and drive it from an agent with `set_param`.
+
+---
+
+## elevator-cop — the elevator with a car operating panel
+
+The full 10-story machine from `elevator-10floor`, plus the operator experience:
+
+- **CS1 (car call panel):** a maintained floor-selector — press 5 in the Car section of
+  the operator console (or on the symbol) and COM-5 closes, wired in parallel with the
+  hall button S5 so either source registers the call. The call is held until you cancel
+  it (press 5 again) or move the destination.
+- **FD1 (floor indicator):** the digit + travel arrows, fed from the cam's new
+  **isolated indicator deck** (ICOM-IF1..10) — a separate deck so the display can never
+  backfeed the control logic through the run-seal chain. Arrows come from KM_up/KM_dn
+  aux contacts, so they show actual travel direction.
+- **SE1 (e-stop):** wired into the control feed ahead of F4, so a trip drops calls,
+  dispatch, the indicator — everything but supply power. The motor coasts down.
+
+**Try it:** press a car call, watch the arrow light and the dispatch dwell run, then
+  walk the car up with the *move car* demo buttons — the digit follows, the arrival
+  logic stops the car at the called floor, and the call stays held until cancelled.
+  Mid-travel, trip SE1.
+
+**Exercise:** call two floors from *different* sources (hall button + car panel) for the
+  same destination and explain why the relay treats them identically.
 
 ---
 

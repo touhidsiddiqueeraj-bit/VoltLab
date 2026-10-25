@@ -54,8 +54,9 @@ export class Engine {
 
   _nextId(type) {
     const base = { breaker3: 'Q', breaker1: 'Q', fuse3: 'F', fuse1: 'F', contactor: 'KM',
-      overload: 'KK', motor3: 'M', pushbutton_no: 'S', pushbutton_nc: 'S', selector2: 'S',
-      timer_on: 'KT', lamp: 'H', buzzer: 'B', supply3: 'X', junction: 'J' }[type] || 'K';
+      overload: 'KK', motor3: 'M', pushbutton_no: 'S', pushbutton_nc: 'S', selector2: 'S', selector3: 'S',
+      timer_on: 'KT', lamp: 'H', buzzer: 'B', supply3: 'X', junction: 'J', estop: 'SE',
+      pedal: 'P', brake: 'P', vfd: 'U', floorselector: 'CS', floordisplay: 'FD', cam10: 'CAM' }[type] || 'K';
     const n = (this._idSeed[base] = (this._idSeed[base] || 0) + 1);
     let id = `${base}${n}`;
     while (this.components.has(id)) id = `${base}${++this._idSeed[base]}`;
@@ -179,9 +180,63 @@ export class Engine {
     } else if (c.type === 'selector2') {
       c.state.pos = closed ? '1' : '0';
       this.log(`selector ${c.label} → position ${closed ? 'I' : '0'}`);
+    } else if (c.type === 'estop') {
+      if (c.state.pressed !== !closed) {
+        c.state.pressed = !closed;
+        this.log(c.state.pressed
+          ? `EMERGENCY STOP ${c.label} TRIPPED — NC pole open`
+          : `emergency stop ${c.label} released (twist-reset)`, 'fault');
+      }
     } else {
       throw new Error(`"${id}" is a ${c.type}, not a switch`);
     }
+    this.maybeStep();
+  }
+
+  // Multi-position selectors: selector3 ('0'|'1'|'2'), floorselector (floor number,
+  // 0 = no call), cam10 alias (1..10). selector2 also accepted.
+  setSelector(id, pos) {
+    const c = this.components.get(id);
+    if (!c) throw new Error(`no component "${id}"`);
+    if (c.type === 'selector3' || c.type === 'selector2') {
+      const p = String(pos);
+      if (!['0', '1', '2'].includes(p) || (c.type === 'selector2' && p === '2')) {
+        throw new Error(`position must be ${c.type === 'selector3' ? '0, 1 or 2' : '0 or 1'}`);
+      }
+      c.state.pos = p;
+      this.log(`selector ${c.label} → position ${p === '0' ? '0' : p === '1' ? 'I' : 'II'}`);
+    } else if (c.type === 'floorselector') {
+      const f = Math.round(Number(pos));
+      const max = Math.min(10, Math.max(2, c.params.floors ?? 10));
+      if (!(f >= 0 && f <= max)) throw new Error(`floor must be 0..${max} (0 = cancel call)`);
+      if (c.state.floor !== f) {
+        c.state.floor = f;
+        this.log(f ? `car call: floor ${f} registered on ${c.label}` : `car call cancelled on ${c.label}`);
+      }
+    } else if (c.type === 'cam10') {
+      return this.setPosition(id, pos);
+    } else {
+      throw new Error(`"${id}" is a ${c.type}, not a multi-position selector`);
+    }
+    this.version++;
+    this.maybeStep();
+  }
+
+  // Analog pedal position (accelerator or brake), 0..1.
+  setPedal(id, value) {
+    const c = this.components.get(id);
+    if (!c) throw new Error(`no component "${id}"`);
+    if (c.type !== 'pedal' && c.type !== 'brake') throw new Error(`"${id}" is a ${c.type}, not a pedal`);
+    const v = Math.max(0, Math.min(1, Number(value)));
+    if (Number.isNaN(v)) throw new Error('pedal value must be a number 0..1');
+    const wasApplied = (c.state.value || 0) > 0.02;
+    c.state.value = Math.round(v * 1000) / 1000;
+    const applied = c.state.value > 0.02;
+    if (applied !== wasApplied) {
+      this.log(`${c.label} ${c.type === 'brake' ? 'BRAKE' : 'pedal'} ${applied ? `applied (${Math.round(c.state.value * 100)}%)` : 'released'}`,
+        c.type === 'brake' && applied ? 'warn' : 'info');
+    }
+    this.version++;
     this.maybeStep();
   }
 
@@ -306,6 +361,9 @@ export class Engine {
         if ('pos' in c.state) persist.pos = c.state.pos;
         if ('energized' in c.state) persist.energized = c.state.energized;
         if ('done' in c.state) persist.done = c.state.done;
+        if ('value' in c.state) persist.value = c.state.value;
+        if ('floor' in c.state) persist.floor = c.state.floor;
+        if (c.type === 'estop' && c.state.pressed) persist.pressed = true;
         if (c.type === 'overload' && c.state.tripped) persist.tripped = true;
         return { id: c.id, type: c.type, label: c.label, x: c.x, y: c.y, params: { ...c.params }, ...(Object.keys(persist).length ? { state: persist } : {}) };
       }),
@@ -374,6 +432,7 @@ export class Engine {
     }
     let dsu = new DSU(termKeys.length);
     let rootPhases = new Map();
+    let rootAnalog = new Map(); // root -> analog level 0..1 (pedal references)
     const seed = (term, phase) => {
       const root = dsu.find(termIdx.get(term));
       if (!rootPhases.has(root)) rootPhases.set(root, new Set());
@@ -393,6 +452,7 @@ export class Engine {
         for (const [a, b] of conductingPoles(c)) U(`${c.id}.${a}`, `${c.id}.${b}`);
       }
       rootPhases = new Map();
+      rootAnalog = new Map();
       for (const c of comps) {
         if (c.type === 'supply3') {
           const lost = this.faults.phase_loss?.phase;
@@ -400,12 +460,26 @@ export class Engine {
             if (p === lost) continue;
             seed(`${c.id}.${p}`, p);
           }
+        } else if (c.type === 'pedal') {
+          // analog 0-100% reference, seeded like a supply phase (0-10 V on R+)
+          const root = dsu.find(termIdx.get(`${c.id}.R+`));
+          rootAnalog.set(root, c.state.value || 0);
+        } else if (c.type === 'vfd' && c.state.running && c.state.dir) {
+          // the drive synthesizes its own rotating field on U/V/W
+          const fwd = c.state.dir > 0;
+          seed(`${c.id}.U`, `${c.id}.a`);
+          seed(`${c.id}.V`, `${c.id}.${fwd ? 'b' : 'c'}`);
+          seed(`${c.id}.W`, `${c.id}.${fwd ? 'c' : 'b'}`);
         }
       }
     };
     buildNets();
 
     const phasesOf = (ref) => rootPhases.get(dsu.find(termIdx.get(ref))) || EMPTY_SET;
+    const analogOf = (ref) => {
+      const v = rootAnalog.get(dsu.find(termIdx.get(ref)));
+      return v === undefined ? 0 : v;
+    };
     const across = (a, b) => {
       const A = phasesOf(a), B = phasesOf(b);
       if (!A.size || !B.size) return false;
@@ -448,6 +522,52 @@ export class Engine {
         case 'buzzer':
           c.state.on = across(`${c.id}.1`, `${c.id}.2`);
           break;
+        case 'floordisplay': {
+          let lit = 0, count = 0;
+          for (let k = 1; k <= 10; k++) {
+            if (across(`${c.id}.${k}`, `${c.id}.N`)) { lit = k; count++; }
+          }
+          c.state.floor = count > 1 ? -1 : lit; // -1 = ambiguous → shows E
+          c.state.up = across(`${c.id}.U`, `${c.id}.N`);
+          c.state.down = across(`${c.id}.D`, `${c.id}.N`);
+          break;
+        }
+        case 'vfd': {
+          const pL1 = phasesOf(`${c.id}.L1`), pL2 = phasesOf(`${c.id}.L2`), pL3 = phasesOf(`${c.id}.L3`);
+          const powered = distinct3(pL1, pL2, pL3);
+          const fwd = across(`${c.id}.FWD`, `${c.id}.COM`);
+          const rev = across(`${c.id}.REV`, `${c.id}.COM`);
+          const fault = fwd && rev ? 'FWD+REV' : '';
+          const wantDir = fault ? 0 : fwd ? 1 : rev ? -1 : 0;
+          const base = c.params.base ?? 50;
+          const ramp = Math.max(1, c.params.ramp ?? 25);
+          const minF = c.params.min_freq ?? 1.5;
+          // speed reference: wired analog pedal wins over the manual ref param
+          const ref = Math.max(analogOf(`${c.id}.R+`), Math.min(1, c.params.ref ?? 0));
+          const targetHz = powered && wantDir && ref > 0 ? ref * base : 0;
+          const freq = c.state.freq || 0;
+          let nf = freq + Math.max(-ramp * dt, Math.min(ramp * dt, targetHz - freq));
+          if (!powered || !wantDir) nf = Math.max(0, nf - ramp * dt); // coast the ramp down
+          nf = Math.max(0, Math.min(base, nf));
+          const running = powered && wantDir !== 0 && nf > minF && !fault;
+          const dir = running ? wantDir : (c.state.dir || 0);
+          const changed = running !== c.state.running || dir !== c.state.dir || fault !== (c.state.fault || '');
+          c.state.freq = Math.round(nf * 10) / 10;
+          c.state.running = running;
+          c.state.dir = running ? wantDir : dir;
+          c.state.fault = fault;
+          if (!c._internal.wasPowered && powered) this.log(`VFD ${c.label} powered up — ${(c.params.base ?? 50).toFixed(0)} Hz drive ready`);
+          if (c._internal.wasPowered && !powered) this.log(`VFD ${c.label} lost power — output off`, 'warn');
+          c._internal.wasPowered = powered;
+          if (fault && !c._internal.faultLogged) { this.log(`VFD ${c.label} FAULT: FWD and REV commanded together`, 'fault'); c._internal.faultLogged = true; }
+          if (!fault) c._internal.faultLogged = false;
+          if (c._internal.wasRunning === undefined) c._internal.wasRunning = false;
+          if (running && !c._internal.wasRunning) this.log(`VFD ${c.label} RUNNING ${dir > 0 ? 'forward' : 'reverse'} — ramping to ${(ref * base).toFixed(1)} Hz`);
+          if (!running && c._internal.wasRunning) this.log(`VFD ${c.label} stopped — output off`, 'warn');
+          c._internal.wasRunning = running;
+          if (changed) buildNets(); // synthetic output phases changed state
+          break;
+        }
         case 'motor3': {
           const pU = phasesOf(`${c.id}.U`), pV = phasesOf(`${c.id}.V`), pW = phasesOf(`${c.id}.W`);
           const anyHot = pU.size + pV.size + pW.size > 0;
@@ -519,6 +639,18 @@ export class Engine {
         const seq = c._internal.seq || { dir: 0, order: '' };
         const speed = c.state.speed || 0; // signed: + forward, − reverse
         const mag = Math.abs(speed);
+        // drive frequency: a VFD feeding this motor scales its speed target
+        // (mains at 50 Hz = full speed, a drive at 15 Hz = 30% speed)
+        let fScale = 0, driven = false;
+        for (const d of comps) {
+          if (d.type !== 'vfd' || !d.state.running) continue;
+          if (connected(`${d.id}.U`, `${c.id}.U`) || connected(`${d.id}.V`, `${c.id}.V`) || connected(`${d.id}.W`, `${c.id}.W`)) {
+            fScale = Math.max(fScale, (d.state.freq || 0) / (d.params.base ?? 50));
+            driven = true;
+          }
+        }
+        if (!driven) fScale = 1; // mains supply — full speed
+        const target = seq.dir * fScale; // signed speed setpoint
         const decay = (rate) => { // decay magnitude toward 0, keep sign; rate clamped for big dt
           const m = mag * (1 - Math.min(1, rate));
           return speed < 0 ? -m : m;
@@ -534,17 +666,16 @@ export class Engine {
             c.state.current = flc * load * 6;
             c.state.speed = decay(dt / 0.5);
           } else {
-            const dir = seq.dir;
-            // plugging: rotor still turning against the applied sequence —
+            // plugging: rotor still turning against the applied field —
             // counter-torque brakes it through zero, then it spins up reversed
-            const plugging = speed * dir < -0.02;
+            const plugging = speed * target < -0.02;
             if (plugging) {
               c.state.current = 2 * flc * load;
-              c.state.speed = speed + (dt / 0.6) * (dir - speed);
+              c.state.speed = speed + (dt / 0.6) * (target - speed);
             } else {
               const inrush = 1 + 5 * Math.max(0, 1 - mag / 0.3); // 6x at standstill → 1x above 0.3
               c.state.current = flc * load * inrush;
-              c.state.speed = speed + (dt / 1.2) * (dir - speed);
+              c.state.speed = speed + (dt / 1.2) * (target - speed);
             }
           }
         } else if (anyHot) { // single-phasing
@@ -598,6 +729,23 @@ export class Engine {
       }
     }
 
+    // ---- 4b. mechanical service brake ----
+    // A brake pedal bound to a motor decelerates it directly (and fights the
+    // drive: current rises while braking under power).
+    for (const c of comps) {
+      if (c.type !== 'brake') continue;
+      const v = c.state.value || 0;
+      if (v <= 0.02) continue;
+      const m = this.components.get(String(c.params.motor || ''));
+      if (!m || m.type !== 'motor3') continue;
+      const rate = 0.8 + 4.2 * v; // decay rate 1/s — full brake stops in ~1 s
+      m.state.speed *= Math.max(0, 1 - Math.min(1, rate * dt));
+      if (m._internal.powered) {
+        const flc = m.params.flc ?? 10, load = m.params.load ?? 0.9;
+        m.state.current = Math.max(m.state.current || 0, flc * load * (1 + 1.6 * v));
+      }
+    }
+
     this.t += dt;
     this.version++;
   }
@@ -632,13 +780,21 @@ export class Engine {
     // step-time roots, which diverge whenever a device changed state in the tick
     const rootPhases = new Map();
     for (const c of comps) {
-      if (c.type !== 'supply3') continue;
-      const lost = this.faults.phase_loss?.phase;
-      for (const ph of ['L1', 'L2', 'L3', 'N']) {
-        if (ph === lost) continue;
-        const root = dsu.find(termIdx.get(`${c.id}.${ph}`));
-        if (!rootPhases.has(root)) rootPhases.set(root, new Set());
-        rootPhases.get(root).add(ph);
+      if (c.type === 'supply3') {
+        const lost = this.faults.phase_loss?.phase;
+        for (const ph of ['L1', 'L2', 'L3', 'N']) {
+          if (ph === lost) continue;
+          const root = dsu.find(termIdx.get(`${c.id}.${ph}`));
+          if (!rootPhases.has(root)) rootPhases.set(root, new Set());
+          rootPhases.get(root).add(ph);
+        }
+      } else if (c.type === 'vfd' && c.state.running && c.state.dir) {
+        const fwd = c.state.dir > 0;
+        for (const [term, ph] of [['U', 'a'], ['V', fwd ? 'b' : 'c'], ['W', fwd ? 'c' : 'b']]) {
+          const root = dsu.find(termIdx.get(`${c.id}.${term}`));
+          if (!rootPhases.has(root)) rootPhases.set(root, new Set());
+          rootPhases.get(root).add(`${c.id}.${ph}`);
+        }
       }
     }
     const netOf = (ref) => {
@@ -694,14 +850,16 @@ function distinct3(a, b, c) {
 }
 
 // Rotation direction from the phase sequence across motor terminals U,V,W:
-// +1 when the phases appear in the L1→L2→L3 cyclic order (or a rotation of it),
-// -1 when two phases are swapped. Returns 0 when no clean 3-phase combo exists.
+// +1 when the phases appear in cyclic sorted order (e.g. L1→L2→L3, or a VFD's
+// a→b→c synthetic field), -1 when two phases are swapped, 0 when no clean
+// 3-phase combo exists. Neutral never forms a rotating field.
 function sequenceDir(pU, pV, pW) {
-  const IDX = { L1: 0, L2: 1, L3: 2 };
   for (const a of pU) for (const b of pV) for (const c of pW) {
-    if (!(a in IDX) || !(b in IDX) || !(c in IDX)) continue;
     if (a === b || b === c || a === c) continue;
-    const fwd = (((IDX[b] - IDX[a]) % 3) + 3) % 3 === 1;
+    if (a === 'N' || b === 'N' || c === 'N') continue;
+    const order = [a, b, c].sort();
+    const idx = { [order[0]]: 0, [order[1]]: 1, [order[2]]: 2 };
+    const fwd = (((idx[b] - idx[a]) % 3) + 3) % 3 === 1;
     return { dir: fwd ? 1 : -1, order: `${a}-${b}-${c}` };
   }
   return { dir: 0, order: '' };
@@ -741,11 +899,21 @@ function conductingPoles(c) {
       return c.state.pressed ? [] : [['11', '12']];
     case 'selector2':
       return c.state.pos === '1' ? [['13', '14']] : [];
+    case 'selector3':
+      return c.state.pos === '1' ? [['COM', 'P1']] : c.state.pos === '2' ? [['COM', 'P2']] : [];
+    case 'estop':
+      return c.state.pressed ? [['13', '14']] : [['11', '12']];
+    case 'pedal':
+      return (c.state.value || 0) >= (c.params.cutoff ?? 0.05) ? [['13', '14']] : [];
+    case 'brake':
+      return (c.state.value || 0) > 0.02 ? [['13', '14']] : [['11', '12']];
+    case 'floorselector':
+      return (c.state.floor || 0) > 0 ? [['COM', String(c.state.floor)]] : [];
     case 'timer_on':
       return c.state.done ? [['15', '16']] : [];
     case 'cam10': {
       const pos = Math.min(10, Math.max(1, c.state.position || 1));
-      const pairs = [['COM', `F${pos}`]];
+      const pairs = [['COM', `F${pos}`], ['ICOM', `IF${pos}`]];
       for (let i = 1; i <= 10; i++) {
         if (i !== pos) pairs.push([`G${i}`, `GH${i}`], [`H${i}`, `HH${i}`]);
       }

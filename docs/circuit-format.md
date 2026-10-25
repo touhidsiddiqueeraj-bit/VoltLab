@@ -19,7 +19,7 @@ by the video exporter.
 ```jsonc
 {
   "id": "KM1",            // unique; referenced by wires and tools
-  "type": "contactor",    // one of the 16 registry types (see below)
+  "type": "contactor",    // one of the 23 registry types (see below)
   "label": "KM1",         // displayed on the schematic and in the component list
   "x": 460, "y": 460,     // absolute canvas position (top-left of the symbol)
   "params": { "flc": 8 }  // optional overrides of the registry defaults
@@ -32,10 +32,10 @@ by the video exporter.
 |---|---|
 | Sources | `supply3` — 3-phase + neutral, always energized |
 | Protection | `breaker3`, `breaker1` (toggle open/closed), `fuse3`, `fuse1` (blow on short-circuit), `overload` (thermal, NC 95-96 + NO 97-98 aux, params `flc`, `trip_class`) |
-| Switching | `contactor` — 3 main poles, NO aux 13-14, NC aux 21-22, coil A1-A2 |
-| Control | `pushbutton_no` (13-14), `pushbutton_nc` (11-12), `selector2` (I/0), `timer_on` (coil A1-A2, contact 15-16, param `delay`), `cam10` (10-position 3-deck floor cam) |
+| Switching | `contactor` — 3 main poles, NO aux 13-14, NC aux 21-22, coil A1-A2; `vfd` — variable frequency drive (L1/L2/L3 in, U/V/W out, FWD/REV/COM digital inputs, R+/R- analog reference; params `base`, `ramp`, `min_freq`, `ref`) |
+| Control | `pushbutton_no` (13-14), `pushbutton_nc` (11-12), `selector2` (I/0), `selector3` (0 / I=P1 / II=P2), `timer_on` (coil A1-A2, contact 15-16, param `delay`), `estop` (maintained NC 11-12 + NO 13-14, twist-to-release), `pedal` (analog 0-1, pole 13-14 above `cutoff`, R+/R- reference out), `brake` (analog 0-1, NC 11-12 + NO 13-14, param `motor` to bind mechanically), `floorselector` (car calls: COM-<floor>), `cam10` (10-position 4-deck floor cam incl. isolated indicator deck ICOM-IF1..10) |
 | Loads | `motor3` (U/V/W, params `flc`, `load`) |
-| Signalling | `lamp`, `buzzer`, `junction` (plain node / rail point) |
+| Signalling | `lamp`, `buzzer`, `floordisplay` (7-seg floor indicator + arrows, inputs 1..10 + U/D + N return), `junction` (plain node / rail point) |
 
 Terminal names follow the registry (`Q1.L1`, `KM1.A1`, `M1.U`, `KK1.95`, …). Run
 `list_terminals` on any component (or read `sim/devices.js`) to see every terminal and

@@ -539,6 +539,78 @@ dialog#legend-dialog::backdrop { background: rgba(0,0,0,.55); }
 .mimic-mot-state.run { color: var(--ok); font-weight: 600; }
 .mimic-mot-state.coast { color: var(--accent); font-weight: 600; }
 .mimic-mot-state.stall { color: var(--bad-text); font-weight: 600; }
+
+/* ---- e-stop mushroom ---- */
+.estop-btn {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, #ff6b5e, var(--bad) 62%, #8c1f1c);
+  border: 3px solid #7a1a17; box-shadow: 0 3px 0 #6d1614, 0 5px 10px rgba(0,0,0,.45);
+  color: #fff; font: 800 9.5px var(--mono, monospace); letter-spacing: .04em;
+  cursor: pointer; transition: transform .08s, box-shadow .08s;
+  display: grid; place-items: center;
+}
+.estop-btn span { display: block; padding-top: 1px; }
+.estop-btn:hover { filter: brightness(1.08); }
+.estop-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #6d1614; }
+.estop-btn:focus-visible { outline: 2px solid var(--accent2); outline-offset: 3px; }
+.estop-btn.tripped {
+  background: radial-gradient(circle at 34% 28%, #ff8377, #d0392f 60%, #7a1a17);
+  animation: estop-blink 0.9s steps(2, start) infinite;
+}
+@keyframes estop-blink { 50% { box-shadow: 0 0 0 4px rgba(227, 52, 47, .45), 0 3px 0 #6d1614; } }
+
+/* ---- analog pedal widgets ---- */
+.mimic-pedals { display: flex; gap: 12px; align-items: flex-end; }
+.pedal-widget { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.pedal-track {
+  position: relative; width: 30px; height: 84px; border-radius: 6px;
+  background: var(--panel2); border: 1.5px solid var(--line);
+  cursor: ns-resize; touch-action: none; overflow: hidden;
+}
+.pedal-track:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+.pedal-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; border-radius: 0 0 5px 5px; transition: height .06s linear; }
+.pedal-track.acc .pedal-fill { background: linear-gradient(180deg, #79d0f7, #2b8fc7); }
+.pedal-track.brk .pedal-fill { background: linear-gradient(180deg, #ff8a80, #c22c24); }
+.pedal-knob {
+  position: absolute; left: 3px; right: 3px; height: 14px; bottom: -9px; border-radius: 4px;
+  background: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.5); transition: bottom .06s linear;
+}
+.pedal-id { font: 700 11px var(--mono, monospace); color: var(--text); }
+.pedal-val { font-size: 10.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.pedal-val.on { color: var(--accent2); font-weight: 700; }
+
+/* ---- VFD drive readouts ---- */
+.drive-freq { font: 700 17px var(--mono, monospace); color: var(--text); font-variant-numeric: tabular-nums; min-width: 56px; }
+.drive-freq .hz { font-size: 10px; color: var(--dim); margin-left: 2px; }
+[data-mdrive] { align-items: center; }
+[data-mdrive].lit .drive-freq { color: var(--ok); }
+
+/* ---- elevator car panel ---- */
+.mimic-elevator { display: flex; gap: 14px; align-items: center; }
+.car-display {
+  display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+  background: #10151d; border: 1.5px solid var(--line); border-radius: 8px;
+}
+.car-digit {
+  font: 700 26px var(--mono, monospace); color: #2a2f38; min-width: 30px; text-align: center;
+  line-height: 1; font-variant-numeric: tabular-nums;
+}
+.car-digit.lit { color: var(--accent, #ffb454); text-shadow: 0 0 12px rgba(255, 180, 84, .55); }
+.car-arrow { font-size: 15px; color: #2a2f38; line-height: 1; }
+.car-arrow.up.lit { color: var(--ok); text-shadow: 0 0 10px rgba(56, 193, 114, .6); }
+.car-arrow.down.lit { color: var(--accent2, #4fc3f7); text-shadow: 0 0 10px rgba(79, 195, 247, .6); }
+.car-calls { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; max-width: 320px; }
+.car-call {
+  width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--line);
+  background: var(--panel2); color: var(--dim);
+  font: 700 11px var(--mono, monospace); cursor: pointer; transition: all .1s;
+}
+.car-call:hover { border-color: var(--accent); color: var(--text); }
+.car-call.lit { background: var(--accent); border-color: var(--accent); color: #10151d; box-shadow: 0 0 10px rgba(255,180,84,.4); }
+.car-call.demo.lit { background: var(--accent2); border-color: var(--accent2); }
+.car-call:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+.car-note { font-size: 9.5px; color: var(--dim); writing-mode: vertical-rl; }
+
 /* slim, themed scrollbars */
 * { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }

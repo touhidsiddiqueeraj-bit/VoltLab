@@ -1,0 +1,281 @@
+{
+  "name": "vehicle-drive",
+  "description": "Electric vehicle / industrial truck drive: Q1 feeds VFD U1 which generates a variable rotating field for the traction motor M1. The key switch SK, pedal interlock P1 (dead-man) and brake NC pole P2 gate the FWD/REV commands from the 3-position selector SD; the accelerator P1 also feeds U1's analog speed reference (R+/R-), so motor speed follows pedal travel. Pressing the brake opens the drive command, lights H2/H3 and mechanically decelerates M1; the e-stop SE1 kills the whole control chain. Try: key on, SD to I, then drag the throttle.",
+  "components": [
+    {
+      "id": "X1",
+      "type": "supply3",
+      "label": "X1",
+      "x": 40,
+      "y": 40
+    },
+    {
+      "id": "Q1",
+      "type": "breaker3",
+      "label": "Q1 Main",
+      "x": 180,
+      "y": 160,
+      "state": {
+        "closed": true
+      }
+    },
+    {
+      "id": "F1",
+      "type": "fuse3",
+      "label": "F1 Power",
+      "x": 330,
+      "y": 300
+    },
+    {
+      "id": "U1",
+      "type": "vfd",
+      "label": "U1 Drive",
+      "x": 500,
+      "y": 300
+    },
+    {
+      "id": "M1",
+      "type": "motor3",
+      "label": "M1 Traction",
+      "x": 800,
+      "y": 420,
+      "params": {
+        "flc": 12,
+        "load": 0.5
+      }
+    },
+    {
+      "id": "F4",
+      "type": "fuse1",
+      "label": "F4 Control",
+      "x": 620,
+      "y": 780
+    },
+    {
+      "id": "SE1",
+      "type": "estop",
+      "label": "SE1 E-STOP",
+      "x": 700,
+      "y": 760
+    },
+    {
+      "id": "SK",
+      "type": "selector2",
+      "label": "SK Key",
+      "x": 880,
+      "y": 760,
+      "state": {
+        "pos": "1"
+      }
+    },
+    {
+      "id": "P1",
+      "type": "pedal",
+      "label": "P1 Throttle",
+      "x": 1060,
+      "y": 740
+    },
+    {
+      "id": "P2",
+      "type": "brake",
+      "label": "P2 Brake",
+      "x": 1260,
+      "y": 740,
+      "params": {
+        "motor": "M1"
+      }
+    },
+    {
+      "id": "SD",
+      "type": "selector3",
+      "label": "SD Dir",
+      "x": 1470,
+      "y": 780
+    },
+    {
+      "id": "H1",
+      "type": "lamp",
+      "label": "H1 Power",
+      "x": 1680,
+      "y": 760,
+      "params": {
+        "color": "#38c172"
+      }
+    },
+    {
+      "id": "H2",
+      "type": "lamp",
+      "label": "H2 Brake",
+      "x": 1680,
+      "y": 920,
+      "params": {
+        "color": "#e3342f"
+      }
+    },
+    {
+      "id": "H3",
+      "type": "lamp",
+      "label": "H3 Brake",
+      "x": 1810,
+      "y": 920,
+      "params": {
+        "color": "#e3342f"
+      }
+    },
+    {
+      "id": "H4",
+      "type": "lamp",
+      "label": "H4 E-stop",
+      "x": 1680,
+      "y": 1060,
+      "params": {
+        "color": "#e3342f"
+      }
+    },
+    {
+      "id": "N1",
+      "type": "junction",
+      "label": "N",
+      "x": 560,
+      "y": 1240
+    }
+  ],
+  "wires": [
+    {
+      "from": "X1.L1",
+      "to": "Q1.L1"
+    },
+    {
+      "from": "X1.L2",
+      "to": "Q1.L2"
+    },
+    {
+      "from": "X1.L3",
+      "to": "Q1.L3"
+    },
+    {
+      "from": "Q1.T1",
+      "to": "F1.L1"
+    },
+    {
+      "from": "Q1.T2",
+      "to": "F1.L2"
+    },
+    {
+      "from": "Q1.T3",
+      "to": "F1.L3"
+    },
+    {
+      "from": "F1.T1",
+      "to": "U1.L1"
+    },
+    {
+      "from": "F1.T2",
+      "to": "U1.L2"
+    },
+    {
+      "from": "F1.T3",
+      "to": "U1.L3"
+    },
+    {
+      "from": "U1.U",
+      "to": "M1.U"
+    },
+    {
+      "from": "U1.V",
+      "to": "M1.V"
+    },
+    {
+      "from": "U1.W",
+      "to": "M1.W"
+    },
+    {
+      "from": "Q1.T1",
+      "to": "F4.L"
+    },
+    {
+      "from": "F4.T",
+      "to": "SE1.11"
+    },
+    {
+      "from": "SE1.12",
+      "to": "SK.13"
+    },
+    {
+      "from": "SK.14",
+      "to": "P1.13"
+    },
+    {
+      "from": "P1.14",
+      "to": "P2.11"
+    },
+    {
+      "from": "P2.12",
+      "to": "SD.COM"
+    },
+    {
+      "from": "SD.P1",
+      "to": "U1.FWD"
+    },
+    {
+      "from": "SD.P2",
+      "to": "U1.REV"
+    },
+    {
+      "from": "U1.COM",
+      "to": "N1.T"
+    },
+    {
+      "from": "P1.R+",
+      "to": "U1.R+"
+    },
+    {
+      "from": "P1.R-",
+      "to": "U1.R-"
+    },
+    {
+      "from": "X1.N",
+      "to": "N1.T"
+    },
+    {
+      "from": "F4.T",
+      "to": "H1.1"
+    },
+    {
+      "from": "H1.2",
+      "to": "N1.T"
+    },
+    {
+      "from": "F4.T",
+      "to": "P2.13"
+    },
+    {
+      "from": "P2.14",
+      "to": "H2.1"
+    },
+    {
+      "from": "P2.14",
+      "to": "H3.1"
+    },
+    {
+      "from": "H2.2",
+      "to": "N1.T"
+    },
+    {
+      "from": "H3.2",
+      "to": "N1.T"
+    },
+    {
+      "from": "SE1.13",
+      "to": "H4.1"
+    },
+    {
+      "from": "SE1.14",
+      "to": "F4.T"
+    },
+    {
+      "from": "H4.2",
+      "to": "N1.T"
+    }
+  ]
+}
