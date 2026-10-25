@@ -110,7 +110,7 @@ contactors and the 3-deck floor cam.*
 | [docs/mcp.md](docs/mcp.md) | Complete 26-tool MCP reference + raw HTTP equivalents + worked agent session |
 | [docs/circuit-format.md](docs/circuit-format.md) | The circuit JSON schema — components, wires, waypoints, demo scripts |
 | [docs/examples.md](docs/examples.md) | Guided tour of every example circuit with scenarios to try |
-| [docs/apk.md](docs/apk.md) | Android APK: **Tier 1 shipped in [v1.1.0](https://github.com/touhidsiddiqueeraj-bit/VoltLab/releases/tag/v1.1.0)**, Tier 2 (full editor) roadmap |
+| [docs/apk.md](docs/apk.md) | VoltLab on Android — **Tier 1 + Tier 2 shipped**: operator demo (1.1.0) and the full offline editor (1.2.0) |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Dev setup, test layout, how to add devices and circuits |
 
 ## Agent control (MCP)
@@ -188,7 +188,7 @@ perform the action.
 ## Tests & packaging
 
 ```bash
-npm test                        # engine + example-circuit tests + MCP end-to-end (32 tests)
+npm test                        # engine + example-circuit tests + local-host tests + MCP end-to-end (39 tests)
 node --test test/dol.test.mjs   # just the DOL physics scenario (14 tests)
 npm start -- --smoke            # Electron headless self-test → prints SMOKE OK
 npm start -- --screenshot=out.png   # load demo, capture PNG, exit
@@ -207,7 +207,7 @@ installers on all three desktops and attaches them to a draft GitHub Release
 | Windows | `VoltLab-Setup-x.y.z-x64.exe` (NSIS installer) + `VoltLab-Portable-x.y.z-x64.exe` |
 | macOS | `VoltLab-x.y.z-arm64.dmg` (Apple Silicon) + `VoltLab-x.y.z.dmg` (Intel, x64) — unsigned, right-click → Open |
 | Linux | `VoltLab-x.y.z-x86_64.AppImage` + `voltlab_x.y.z_amd64.deb` |
-| Android | `VoltLab-x.y.z.apk` — offline operator/demo tier ([details](docs/apk.md)), built locally with Capacitor |
+| Android | `VoltLab-x.y.z.apk` — the **full editor** offline (Tier 2, [details](docs/apk.md)); built locally with Capacitor + a release key |
 
 Plain `git tag v1.1.0 && git push --tags` is all it takes to cut a release.
 

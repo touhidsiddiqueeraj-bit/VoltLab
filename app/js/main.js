@@ -1,10 +1,11 @@
-// app/js/main.js — UI bootstrap: theme, SSE state stream, command channel, interactions.
+// app/js/main.js — UI bootstrap: theme, host transport (server or in-page), interactions.
 import { DEVICE_TYPES } from '/sim/devices.js';
 import { PALETTE_GROUPS, SYMBOLS } from './symbols.js';
 import { renderScene, parseRef } from './render.js';
 import { recordDemo } from './video.js';
 import { buildReport } from './report.js';
 import { startTutorial } from './tutorial.js';
+import { initHost } from './host.js';
 
 const $ = (sel) => document.querySelector(sel);
 const svg = $('#canvas');
@@ -37,15 +38,13 @@ function initTheme() {
     applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
 }
 
-// ---------- command channel ----------
+// ---------- transport (server.js or in-page engine — app/js/host.js) ----------
+let host = null;   // wired in boot(); every command flows through it
+
 async function cmd(tool, args = {}) {
+  if (!host) return { ok: false, error: 'starting up…' };
   try {
-    const res = await fetch('/api/command', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tool, args })
-    });
-    const r = await res.json();
+    const r = await host.call(tool, args);
     if (r.ok === false) toast(`${tool}: ${r.error}`);
     else window.dispatchEvent(new CustomEvent('vl-action', { detail: { tool, args, result: r } }));
     return r;
@@ -68,26 +67,27 @@ function closeMenus() {
   document.querySelectorAll('details.menu[open]').forEach(d => d.removeAttribute('open'));
 }
 
-// ---------- SSE ----------
-function connect() {
-  const es = new EventSource('/api/events');
-  es.addEventListener('state', (ev) => {
-    $('#st-conn').className = 'dot on';
-    const snap = JSON.parse(ev.data);
-    // A drag in progress owns the dragged component's position — keep the
-    // locally-tracked coordinates instead of snapping back to the server copy.
-    if (ui.dragging?.moved) {
-      const c = snap.components.find(x => x.id === ui.dragging.id);
-      if (c) { c.x = ui.dragging.x; c.y = ui.dragging.y; }
-    }
-    ui.snapshot = snap;
-    updateStatus(ui.snapshot);
-    renderNow();
-    renderLog(ui.snapshot);
-  });
-  es.addEventListener('hello', () => { $('#st-conn').className = 'dot on'; });
-  es.addEventListener('export-request', handleExportRequest);
-  es.onerror = () => { $('#st-conn').className = 'dot off'; };
+// ---------- state stream ----------
+function handleState(snap) {
+  $('#st-conn').className = 'dot on';
+  // A drag in progress owns the dragged component's position — keep the
+  // locally-tracked coordinates instead of snapping back to the engine copy.
+  if (ui.dragging?.moved) {
+    const c = snap.components.find(x => x.id === ui.dragging.id);
+    if (c) { c.x = ui.dragging.x; c.y = ui.dragging.y; }
+  }
+  ui.snapshot = snap;
+  updateStatus(ui.snapshot);
+  renderNow();
+  renderLog(ui.snapshot);
+}
+
+function handleExportRequest({ kind, name }) {
+  if (kind === 'video') {
+    recordDemo(name).then(r => toast(`video saved → ${r.path}`)).catch(e => toast(`video export failed: ${e.message}`));
+  } else if (kind === 'pdf') {
+    buildReport(ui.snapshot).then(html => host.submitReport(html, name)).catch(() => {});
+  }
 }
 
 function updateStatus(s) {
@@ -382,7 +382,9 @@ function svgPoint(evt) {
   return { x: Math.round(p.x / 10) * 10, y: Math.round(p.y / 10) * 10 };
 }
 
-svg.addEventListener('mousemove', (e) => {
+// Pointer events (mouse + touch + pen) drive drags; hover preview keeps working
+// for mouse because pointermove is a superset of mousemove.
+svg.addEventListener('pointermove', (e) => {
   const p = svgPoint(e);
   if (ui.dragging) {
     if (!ui.dragging.moved && (Math.abs(p.x - ui.dragging.startX) > 3 || Math.abs(p.y - ui.dragging.startY) > 3)) {
@@ -449,8 +451,10 @@ svg.addEventListener('pointerdown', (e) => {
   }
 });
 
-// placing a component happens on click (empty canvas area)
+// placing a component happens on click (empty canvas area) — unless a
+// touch gesture (pan/pinch) just ended, in which case this click is a stray.
 svg.addEventListener('click', async (e) => {
+  if (Date.now() < gestureEndsAt) return;
   if (ui.placing && !e.target.closest('.sym') && !e.target.closest('.terminal')) {
     const p = svgPoint(e);
     const r = await cmd('add_component', { type: ui.placing, x: p.x, y: p.y });
@@ -490,7 +494,14 @@ $('#btn-step').onclick = () => cmd('sim_control', { action: 'step' });
 $('#btn-advance').onclick = () => { cmd('sim_control', { action: 'advance', seconds: Number($('#advance-sec').value) || 1 }); closeMenus(); };
 $('#btn-clear').onclick = () => { cmd('clear_circuit'); closeMenus(); };
 $('#btn-reset').onclick = () => { cmd('sim_control', { action: 'reset' }); closeMenus(); };
-$('#btn-save').onclick = () => { closeMenus(); const name = prompt('Save circuit as:', 'my-circuit'); if (name) cmd('save_circuit', { name: name.trim().replace(/[^A-Za-z0-9._-]/g, '-') }).then(r => r.ok && refreshCircuits()); };
+$('#btn-save').onclick = async () => {
+  closeMenus();
+  const name = await uiPrompt('Save circuit as', localStorage.getItem('vl-last-save') || 'my-circuit');
+  if (!name) return;
+  const clean = name.replace(/[^A-Za-z0-9._-]/g, '-');
+  const r = await cmd('save_circuit', { name: clean });
+  if (r.ok) { localStorage.setItem('vl-last-save', clean); refreshCircuits(); }
+};
 $('#btn-load').onclick = () => {
   cmd('load_circuit', { name: $('#circuit-select').value }).then(r => {
     if (r.ok) localStorage.setItem('vl-last-circuit', r.loaded || $('#circuit-select').value);
@@ -562,6 +573,90 @@ svg.addEventListener('wheel', (e) => {
   applyZoom(ui.zoom * (e.deltaY < 0 ? 1.12 : 0.89), { x: cx, y: cy });
 }, { passive: false });
 
+// ---------- touch gestures: two-finger pinch zoom, one-finger pan ----------
+// The wrap's CSS touch-action is none, so these own the whole gesture space.
+const touchWrap = document.querySelector('#canvas-wrap');
+const activePointers = new Map();  // pointerId -> {x, y}
+let pinch = null;                   // {startDist, startZoom}
+let pan = null;                    // {sx, sy, sl, st, moved}
+let gestureEndsAt = 0;             // suppress stray clicks right after a gesture
+
+const onInteractive = (t) => t.closest?.('.sym') || t.closest?.('.terminal') ||
+  t.closest?.('[data-press]') || t.closest?.('[data-toggle]') || t.closest?.('[data-reset]');
+
+touchWrap.addEventListener('pointerdown', (e) => {
+  activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (activePointers.size === 2) {
+    // second finger: a pinch takes over — commit and drop any drag in progress
+    if (ui.dragging?.moved) cmd('move_component', { id: ui.dragging.id, x: ui.dragging.x, y: ui.dragging.y });
+    ui.dragging = null;
+    const [a, b] = [...activePointers.values()];
+    pinch = { startDist: Math.hypot(a.x - b.x, a.y - b.y) || 1, startZoom: ui.zoom };
+    pan = null;
+  } else if (activePointers.size === 1 && e.pointerType !== 'mouse' && !onInteractive(e.target)) {
+    // touch on empty canvas → pan the viewport
+    pan = { sx: e.clientX, sy: e.clientY, sl: touchWrap.scrollLeft, st: touchWrap.scrollTop, moved: false };
+  }
+});
+
+touchWrap.addEventListener('pointermove', (e) => {
+  if (!activePointers.has(e.pointerId)) return;
+  activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && activePointers.size >= 2) {
+    const [a, b] = [...activePointers.values()];
+    const dist = Math.hypot(a.x - b.x, a.y - b.y);
+    if (Math.abs(dist - pinch.startDist) > 4) {
+      const rect = svg.getBoundingClientRect();
+      const midX = (a.x + b.x) / 2 - rect.left;
+      const midY = (a.y + b.y) / 2 - rect.top;
+      applyZoom(pinch.startZoom * (dist / pinch.startDist), { x: midX / ui.zoom, y: midY / ui.zoom });
+      gestureEndsAt = Date.now() + 350;
+    }
+  } else if (pan && activePointers.size === 1) {
+    touchWrap.scrollLeft = pan.sl - (e.clientX - pan.sx);
+    touchWrap.scrollTop = pan.st - (e.clientY - pan.sy);
+    if (Math.abs(e.clientX - pan.sx) + Math.abs(e.clientY - pan.sy) > 12) {
+      pan.moved = true;
+      gestureEndsAt = Date.now() + 350;
+    }
+  }
+});
+
+const endTouchPointer = (e) => {
+  activePointers.delete(e.pointerId);
+  if (activePointers.size < 2) pinch = null;
+  if (activePointers.size === 0) pan = null;
+};
+touchWrap.addEventListener('pointerup', endTouchPointer);
+touchWrap.addEventListener('pointercancel', endTouchPointer);
+
+// ---------- mobile drawers (palette / inspector become overlays) ----------
+const drawerPalette = $('#btn-drawer-palette');
+const drawerInspector = $('#btn-drawer-inspector');
+function setDrawer(name, open) {
+  const el = $(name);
+  el.classList.toggle('open', open);
+  const aria = name === '#palette' ? drawerPalette : drawerInspector;
+  aria.setAttribute('aria-expanded', String(open));
+}
+drawerPalette.onclick = () => {
+  const open = !$('#palette').classList.contains('open');
+  setDrawer('#palette', open);
+  if (open) setDrawer('#inspector', false);
+};
+drawerInspector.onclick = () => {
+  const open = !$('#inspector').classList.contains('open');
+  setDrawer('#inspector', open);
+  if (open) setDrawer('#palette', false);
+};
+// close drawers when a canvas interaction starts
+svg.addEventListener('pointerdown', () => {
+  if ($('#palette').classList.contains('open') || $('#inspector').classList.contains('open')) {
+    setDrawer('#palette', false);
+    setDrawer('#inspector', false);
+  }
+});
+
 // ---------- MCP activation panel ----------
 let mcpHealth = { mcpScript: '/mcp/server.mjs' };
 const MCP_CONFIG = () => JSON.stringify({
@@ -576,6 +671,15 @@ const MCP_CONFIG = () => JSON.stringify({
 
 async function pollMcp() {
   if (!$('#menu-mcp').open) return;
+  if (host?.mode === 'local') {
+    // offline mode: the engine runs in this page, there is no agent endpoint
+    $('#mcp-api').textContent = 'local (offline)';
+    $('#mcp-api').className = 'v';
+    $('#mcp-agent').textContent = 'requires desktop mode';
+    $('#mcp-agent').className = 'v';
+    $('#mcp-config').textContent = '// MCP agent control needs the desktop app:\n//   npm start        (Electron + server)\n//   node server.js   (browser + server)';
+    return;
+  }
   try {
     const r = await (await fetch('/api/health')).json();
     mcpHealth = r;
@@ -643,34 +747,21 @@ $('#btn-pdf').onclick = async () => {
   closeMenus();
   try {
     const html = await buildReport(ui.snapshot);
-    const r = await (await fetch('/api/export/report', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ html, circuit: ui.snapshot?.circuit })
-    })).json();
+    const r = await host.submitReport(html, ui.snapshot?.circuit);
     toast(`report saved → ${r.path}${r.note ? ' (' + r.note + ')' : ''}`);
   } catch (e) {
     toast(`pdf export failed: ${e.message}`);
   }
 };
 
-// agent-initiated export requests arrive over SSE
-function handleExportRequest(ev) {
-  const { kind, name } = JSON.parse(ev.data);
-  if (kind === 'video') {
-    recordDemo(name).then(r => toast(`video saved → ${r.path}`)).catch(e => toast(`video export failed: ${e.message}`));
-  } else if (kind === 'pdf') {
-    buildReport(ui.snapshot).then(html =>
-      fetch('/api/export/report', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html, circuit: name }) })
-    ).catch(() => {});
-  }
-}
+// agent-initiated export requests arrive through the host (SSE or local)
+// → handleExportRequest(), defined next to the state stream above.
 
 // ---------- circuits dropdown ----------
 async function refreshCircuits() {
+  if (!host) return;
   try {
-    const r = await (await fetch('/api/health')).json();
+    const r = await host.health();
     $('#circuit-select').innerHTML = (r.circuits || []).map(c => `<option>${c}</option>`).join('');
   } catch { /* offline */ }
 }
@@ -681,22 +772,83 @@ window.addEventListener('vl-action', (ev) => {
   if (tool === 'load_circuit' && result.ok) ui.pendingFit = result.loaded || true;
 });
 
+// ---------- save-as dialog (window.prompt is unavailable on Android WebView) ----------
+function uiPrompt(title, def = '') {
+  return new Promise(resolve => {
+    const dlg = $('#save-dialog');
+    $('#save-dialog-title').textContent = title;
+    const inp = $('#save-dialog-input');
+    inp.value = def;
+    const cleanup = () => {
+      dlg.querySelector('form').removeEventListener('submit', onSubmit);
+      dlg.removeEventListener('close', onClose);
+      $('#save-dialog-cancel').onclick = null;
+    };
+    const onSubmit = (ev) => {
+      ev.preventDefault();
+      cleanup();
+      resolve(inp.value.trim() || null);
+    };
+    const onClose = () => { cleanup(); resolve(null); };   // Esc / cancel
+    dlg.querySelector('form').addEventListener('submit', onSubmit);
+    dlg.addEventListener('close', onClose);
+    $('#save-dialog-cancel').onclick = () => dlg.close();
+    dlg.showModal();
+    setTimeout(() => { inp.focus(); inp.select(); }, 40);
+  });
+}
+
 // ---------- boot ----------
 initTheme();
 buildPalette();
 buildLegend();
-refreshCircuits();
-connect();
 requestAnimationFrame(frame);
 applyZoom(1);
 
-// resume the circuit that was open last session (client-side override of autoload)
 (async () => {
+  // canvas → PNG for the local-mode screenshot tool
+  const pngDataUrl = async () => {
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const vb = svg.viewBox?.baseVal;
+    const scale = 1.5;
+    const w = Math.max(64, Math.round((vb?.width || 1200) * scale));
+    const h = Math.max(64, Math.round((vb?.height || 800) * scale));
+    const clone = svg.cloneNode(true);
+    clone.setAttribute('xmlns', SVGNS);
+    let css = '';
+    try { css = await (await fetch('/css/app.css')).text(); } catch { /* keep going without it */ }
+    const style = document.createElementNS(SVGNS, 'style');
+    style.textContent = css;
+    clone.insertBefore(style, clone.firstChild);
+    clone.setAttribute('width', w);
+    clone.setAttribute('height', h);
+    const str = new XMLSerializer().serializeToString(clone);
+    const img = new Image();
+    await new Promise((ok, bad) => { img.onload = ok; img.onerror = bad; img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(str); });
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#0d1117';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    return cv.toDataURL('image/png');
+  };
+
+  host = await initHost({
+    onState: handleState,
+    onExportRequest: handleExportRequest,
+    onStatus: (on) => { $('#st-conn').className = 'dot ' + (on ? 'on' : 'off'); },
+    getPngDataUrl: pngDataUrl
+  });
+  refreshCircuits();
+
+  // resume the circuit that was open last session
   const last = localStorage.getItem('vl-last-circuit');
-  if (!last) return;
-  await new Promise(r => setTimeout(r, 600)); // let the server autoload settle
-  try {
-    const r = await (await fetch('/api/health')).json();
-    if ((r.circuits || []).includes(last)) cmd('load_circuit', { name: last });
-  } catch { /* offline */ }
+  if (last) {
+    await new Promise(r => setTimeout(r, host.mode === 'http' ? 600 : 50)); // let the server autoload settle
+    try {
+      const h = await host.health();
+      if ((h.circuits || []).includes(last)) cmd('load_circuit', { name: last });
+    } catch { /* offline */ }
+  }
 })();

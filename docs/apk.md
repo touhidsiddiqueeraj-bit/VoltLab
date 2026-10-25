@@ -1,105 +1,95 @@
-# Shipping VoltLab as an Android APK — viability assessment
+# VoltLab on Android — both tiers shipped
 
-> **Status update — Tier 1 shipped.** [VoltLab 1.1.0](https://github.com/touhidsiddiqueeraj-bit/VoltLab/releases/tag/v1.1.0)
-> includes `VoltLab-1.1.0.apk`: the operator/demo tier below, wrapped in Capacitor 7,
-> release-signed (v1+v2 schemes), Android 6.0+ (minSdk 23, targetSdk 35), fully
-> offline. Tier 2 (full editor) remains the roadmap item described below.
+> **Status — Tier 2 shipped.** [VoltLab 1.2.0](https://github.com/touhidsiddiqueeraj-bit/VoltLab/releases/latest)
+> packages the **full circuit editor** in an offline APK: palette, wiring,
+> inspector, faults, saving to the device, exports — the real engine running
+> in the page, no server. Tier 1 (the demo/operator APK) shipped in
+> [1.1.0](https://github.com/touhidsiddiqueeraj-bit/VoltLab/releases/tag/v1.1.0).
 
-**Short answer: yes — viable, with two tiers of effort.** The simulator core was
-designed to run without a backend, which is the whole ball game on Android.
+**Short answer: it was viable, and it's done.** The simulator core was
+designed to run without a backend — that design is what made both tiers
+straightforward.
 
-## Why it's viable (verified)
+## Why it was viable
 
-The engine is pure, dependency-free JavaScript that already runs in a plain
-browser tab today:
+The engine is pure, dependency-free JavaScript that already ran in a plain
+browser tab (the GitHub Pages demo proved it):
 
-- `sim/engine.js` — the solver: no Node APIs, no `fetch`, no filesystem. It is
-  ESM, imports only `sim/devices.js`, and is driven by plain method calls
-  (`pressButton`, `setSwitch`, `step`).
-- `app/js/render.js` + `app/js/symbols.js` — the SVG schematic renderer: same
-  story, pure DOM/SVG.
-- `docs/demo/` (the GitHub Pages demo) already runs the **real engine + renderer
-  fully client-side** — proof that everything a user sees on screen works
-  without the HTTP host.
+- `sim/engine.js` — the solver: no Node APIs, no `fetch`, no filesystem.
+- `app/js/render.js` + `app/js/symbols.js` — the SVG schematic renderer: pure DOM/SVG.
+- `sim/tools.js` — the tool dispatcher (split out of `sim/api.js` in 1.2.0 so
+  the exact same tool logic runs in Node and in the browser).
 
-The only piece that does not exist on Android is the *transport*: the full
-editor UI (`app/js/main.js`) talks to `server.js` over HTTP (`POST /api/command`)
-and SSE (`/api/events`). None of that logic is complicated — it's a thin pipe
-between the UI and `sim/api.js`'s tool dispatcher.
+The only piece that did not exist on Android was the *transport*: the editor
+UI (`app/js/main.js`) talked to `server.js` over HTTP + SSE.
 
-## Tier 1 — demo APK (≈ half a day)
+## How Tier 2 works (v1.2.0)
 
-Bundle `docs/demo/` as-is in a [Capacitor](https://capacitorjs.com) shell:
+One seam, one local host:
+
+```
+ui/main.js ──cmd(tool,args)──▶ app/js/host.js ──▶ app/js/local-api.js ──▶ sim/tools.js ──▶ sim/engine.js
+     ▲                                                                          │
+     └────────── onState(engine.snapshot()) on a 10 Hz loop ────────────────────┘
+```
+
+- **`app/js/host.js`** — the single transport seam. Server mode keeps the
+  exact fetch + SSE behaviour; local mode (Capacitor, `file://`, or `?local=1`
+  in any browser) swaps in the in-page host. Every UI feature goes through it.
+- **`app/js/local-api.js`** — the in-page host: same contracts as `server.js`
+  (`call`/`state`/`health`, command-then-broadcast, the 10 Hz realtime loop)
+  around the shared dispatcher. Dependency-injected (`fetchImpl`, `storage`),
+  so it's unit-tested in Node (`test/localapi.test.mjs`).
+- **Circuits** = bundled examples (`circuits/` + a generated `index.json`
+  manifest) ∪ user-saved circuits in `localStorage`. Saved copies shadow
+  bundled ones with the same name.
+- **Exports** — video (webm) and PDF reports save via
+  `@capacitor/filesystem` to the app's Documents folder on Android, or as a
+  browser download in `?local=1` mode. Local screenshots render the SVG
+  canvas to PNG.
+- **Touch** — two-finger pinch zoom, one-finger pan, tap-to-select/wire,
+  hold-to-press mimic buttons, and an in-page Save-as dialog (Android
+  WebViews have no `window.prompt`). Terminals grow to 13 px hit circles on
+  coarse pointers; palette and inspector become swipe-in drawers below 900 px.
+- **MCP** — not applicable offline; the panel says so. The desktop app keeps
+  the full agent layer.
+
+### Try it without an APK
+
+Any static file server + `?local=1`:
 
 ```bash
-npm i -D @capacitor/cli @capacitor/core @capacitor/android
-npx cap init VoltLab io.voltlab.simulator --web-dir=www
-cp -r docs/demo www/
-npx cap add android
-npx cap open android   # then Build ▸ Generate Signed Bundle / APK
+scripts/build-offline-bundle.sh        # → dist/offline (~300 KB)
+cd dist/offline && python3 -m http.server 8099
+open http://localhost:8099/?local=1    # full editor, zero server
 ```
 
-Result: an installable APK with the live demo — circuit selection, run/pause,
-advance, zoom/fit, and the mimic buttons all working offline. No server, no
-permissions, no network. This alone is shippable as a companion app.
+## Building the APK
 
-**Caveat:** the demo page is a *viewer/operator* — it has no editor palette.
-Editing (placing components, wiring) is Tier 2.
-
-## Tier 2 — full editor APK (≈ 1–2 weeks)
-
-The editor needs one new module: a **client-side command bridge** that offers
-the same interface the server offers, but backed by an in-page `Engine`:
-
-```
-ui/main.js  ──cmd(tool, args)──▶  www/js/local-api.js  ──▶  sim/api.js dispatcher  ──▶  Engine
-        ▲                                                                        │
-        └────────── renderScene(engine.snapshot()) on a 10 Hz timer ──────────────┘
+```bash
+scripts/build-apk.sh                   # → dist/VoltLab-<version>.apk
 ```
 
-`sim/api.js` already centralizes every tool (`press_button`, `connect`,
-`inject_fault`, `load_circuit`, …) — the bridge is essentially:
+Requires a JDK 21 and `ANDROID_HOME`; wraps `scripts/build-offline-bundle.sh`
+for the web layer, generates launcher icons from the app logo, signs with the
+release keystore ( honouring `KEYSTORE_PASSWORD`; the build keystore stays out
+of the repo). `docs/apk.md` history: Tier 1 wrapped `docs/demo/` (operator
+tier, v1.1.0); Tier 2 wraps the full editor (v1.2.0).
 
-- a `cmd(tool, args)` shim that calls the dispatcher directly instead of
-  `fetch('/api/command')`;
-- a `setInterval(100ms)` loop replacing the SSE stream, calling
-  `renderScene()` with `engine.snapshot()`;
-- `save_circuit` / circuit listing mapped to `localStorage` instead of the
-  `circuits/` directory;
-- PDF/video export either dropped or replaced with `window.print()` /
-  `MediaRecorder` (both work in modern Android WebViews).
+## Known Android-specific choices
 
-Everything else — palette, wiring, inspector, faults menu, tutorial, operator
-panel — is already transport-agnostic UI code.
+| Item | Resolution |
+|---|---|
+| Touch targets | terminals 13 px hit circles on coarse pointers; 38–40 px buttons; 52 px mimic buttons |
+| Pinch-zoom | two-pointer gesture on the canvas (transform plumbing reused) |
+| `window.prompt` | in-page `<dialog>` Save-as |
+| Back button | WebView default (exit); cancel via on-screen affordances |
+| APK size | ~3.4 MB |
+| Performance | per-tick union-find solver — no problem in a WebView |
+| Play Store | not required for sideloading; signing key + console if you want it there |
 
-**MCP layer:** not applicable on Android (it exists so desktop LLM agents can
-drive the app over stdio/HTTP). It's simply absent from the mobile build, no
-porting needed.
+## CI for the APK
 
-## Known Android-specific work items
-
-| Item | Effort | Notes |
-|---|---|---|
-| Touch targets | small | Terminals are 18 px hit circles — enlarge to ≥ 40 px on touch profiles, or add a magnifier on long-press |
-| Pinch-zoom | small | Replace Ctrl+wheel handler with touch gesture (the transform plumbing already exists) |
-| Back button | trivial | Map to "cancel placing / close menu" instead of exiting |
-| APK size | none | ~3–5 MB (a WebView + static JS; Electron is *not* included) |
-| Performance | none | The solver is a per-tick union-find over ≤ ~50 components; runs comfortably in a WebView |
-| Play Store | process | Signing key + Play Console; for direct APK distribution (sideload) nothing is needed |
-
-## CI for the APK (when you're ready)
-
-A `build-apk.yml` workflow needs `actions/setup-java@v4` (Temurin 17) +
-`android-actions/setup-android@v3` + `gradle-wrapper`; `./gradlew
-assembleRelease` in `android/` produces `app-release-unsigned.apk`; sign with
-`r0adkll/upload-google-play` or a keystore secret. Budget ~5–8 min per build.
-Add it only when Tier 2 lands — shipping a demo-only APK from CI is also fine
-if you want the badge earlier.
-
-## Recommendation
-
-1. Ship **Tier 1 now** — it's a static folder that already works; zero risk to
-   the desktop app.
-2. Do **Tier 2** when there's real mobile demand; the architecture (transport
-   behind one module, engine already browser-proven) was set up for exactly
-   this move.
+The desktop installers build on tag push via `.github/workflows/release.yml`.
+The APK is built locally with `scripts/build-apk.sh` (keystore + SDK are not
+in CI); the release process attaches it to the same GitHub Release.

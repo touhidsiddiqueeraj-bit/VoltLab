@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>VoltLab — Motor Control Simulator</title>
   <link rel="stylesheet" href="/css/app.css">
   <link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -93,6 +94,8 @@
   </header>
 
   <main id="workspace">
+    <button id="btn-drawer-palette" class="drawer-toggle" aria-label="Components" title="Components">☰</button>
+    <button id="btn-drawer-inspector" class="drawer-toggle right" aria-label="Inspector" title="Inspector">ⓘ</button>
     <aside id="palette">
       <div class="palette-search">
         <input id="palette-filter" type="search" placeholder="Filter components…" autocomplete="off" spellcheck="false">
@@ -177,6 +180,17 @@
       <button id="legend-close" title="Close">✕</button>
     </div>
     <div id="legend-grid"></div>
+  </dialog>
+
+  <dialog id="save-dialog">
+    <form method="dialog">
+      <h3 id="save-dialog-title">Save circuit as</h3>
+      <input id="save-dialog-input" type="text" spellcheck="false" autocomplete="off" maxlength="60">
+      <div class="dlg-actions">
+        <button id="save-dialog-ok" class="accent" value="ok">Save</button>
+        <button type="button" id="save-dialog-cancel">Cancel</button>
+      </div>
+    </form>
   </dialog>
 
   <script type="module" src="/js/main.js"></script>

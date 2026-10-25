@@ -1,7 +1,8 @@
 // app/js/video.js — demo video export: scripts button presses, records the live
-// simulation off an offscreen canvas via MediaRecorder, uploads the webm.
+// simulation off an offscreen canvas via MediaRecorder, saves the webm.
 
 import { DEVICE_TYPES } from '/sim/devices.js';
+import { getHost } from './host.js';
 
 const W = 1280, H = 720;
 
@@ -100,19 +101,18 @@ export async function recordDemo(name, onProgress) {
   const css = await getSvgCss();
 
   // circuit demo script (from the circuit JSON) or a generic sweep
+  const host = getHost();
   let script;
   try {
-    const health = await (await fetch('/api/health')).json();
+    const health = await host.health();
     const list = health.circuits || [];
     if (list.includes(name)) {
-      const json = await (await fetch(`/circuits/${name}.json`)).json();
-      script = json.demo;
+      script = (await host.loadCircuitJson(name)).demo;
     }
   } catch { /* fall through */ }
   if (!script && window.__vlSnapshot) script = window.__vlSnapshot.circuitDemo;
   if (!script) {
-    const r = await (await fetch('/api/state')).json();
-    script = buildGenericDemo(r.state);
+    script = buildGenericDemo(await host.state());
   }
 
   const canvas = document.createElement('canvas');
@@ -126,8 +126,8 @@ export async function recordDemo(name, onProgress) {
   let currentCaption = '';
   let stepLabel = '';
 
-  const stateRes = await (await fetch('/api/state')).json();
-  snapshotForCam = stateRes.state;
+  const stateRes = await host.state();
+  snapshotForCam = stateRes;
   const compById = new Map(snapshotForCam.components.map(c => [c.id, c]));
   const aimAt = (id) => {
     const c = compById.get(id);
@@ -174,18 +174,18 @@ export async function recordDemo(name, onProgress) {
         await sleep(step.wait);
       } else if (step.press) {
         aimAt(step.press);
-        await fetch('/api/command', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tool: 'press_button', args: { id: step.press } }) });
+        await host.call('press_button', { id: step.press });
       } else if (step.release) {
-        await fetch('/api/command', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tool: 'release_button', args: { id: step.release } }) });
+        await host.call('release_button', { id: step.release });
       } else if (step.toggle) {
         aimAt(step.toggle);
-        const r = await (await fetch('/api/state')).json();
-        const c = r.state.components.find(x => x.id === step.toggle);
+        const snap = await host.state();
+        const c = snap.components.find(x => x.id === step.toggle);
         const closed = c.state.closed ?? c.state.pos === '1';
-        await fetch('/api/command', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tool: 'set_switch', args: { id: step.toggle, closed: !closed } }) });
+        await host.call('set_switch', { id: step.toggle, closed: !closed });
       } else if (step.cam) {
         aimAt(step.cam[0]);
-        await fetch('/api/command', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tool: 'set_position', args: { id: step.cam[0], position: step.cam[1] } }) });
+        await host.call('set_position', { id: step.cam[0], position: step.cam[1] });
       } else if (step.fit) {
         Object.assign(camTarget, fitAll(img));
       }
@@ -200,6 +200,5 @@ export async function recordDemo(name, onProgress) {
   await done;
   canvas.remove();
   const blob = new Blob(chunks, { type: 'video/webm' });
-  const res = await fetch(`/api/export/video?circuit=${encodeURIComponent(name || 'circuit')}`, { method: 'POST', body: blob });
-  return await res.json();
+  return await host.uploadVideo(blob, name);
 }
