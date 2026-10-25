@@ -19,12 +19,12 @@ comps = [
     {"id": "Q1", "type": "breaker3", "label": "Q1", "x": 180, "y": 160, "state": {"closed": True}},
     {"id": "F1", "type": "fuse3", "label": "F1", "x": 320, "y": 320},
     {"id": "KM_run", "type": "contactor", "label": "KM_run", "x": 460, "y": 460},
-    {"id": "KK1", "type": "overload", "label": "KK1", "x": 700, "y": 460, "params": {"flc": 15, "trip_class": 10}},
     {"id": "KM_up", "type": "contactor", "label": "KM_up", "x": 900, "y": 460},
     {"id": "KM_dn", "type": "contactor", "label": "KM_dn", "x": 900, "y": 760},
-    {"id": "M1", "type": "motor3", "label": "M1 Hoist", "x": 1160, "y": 560, "params": {"flc": 15, "load": 0.9}},
+    {"id": "KK1", "type": "overload", "label": "KK1", "x": 1140, "y": 590, "params": {"flc": 15, "trip_class": 10}},
+    {"id": "M1", "type": "motor3", "label": "M1 Hoist", "x": 1400, "y": 760, "params": {"flc": 15, "load": 0.9}},
     {"id": "F4", "type": "fuse1", "label": "F4", "x": 1320, "y": 320},
-    {"id": "CAM1", "type": "cam10", "label": "CAM1 Car pos", "x": 1380, "y": 470, "state": {"position": 1}},
+    {"id": "CAM1", "type": "cam10", "label": "CAM1 Car pos", "x": 1660, "y": 470, "state": {"position": 1}},
     {"id": "SelUp", "type": "selector2", "label": "SelUp", "x": 1380, "y": 920, "state": {"pos": "1"}},
     {"id": "SelDn", "type": "selector2", "label": "SelDn", "x": 1380, "y": 1060},
     {"id": "KP", "type": "contactor", "label": "KP Dispatch", "x": 1300, "y": 1240},
@@ -34,25 +34,45 @@ comps = [
 ]
 wires = []
 
-# power: X1 -> Q1 -> F1 -> KM_run -> (KK1 -> motor); KM_up/KM_dn tap between them
+# POWER PATH (fixed): X1 -> Q1 -> F1 -> KM_run -> {KM_up | KM_dn} -> KK1 -> M1
+# The direction contactors are IN the power path now. KM_dn swaps L2/L3 so the
+# hoist motor actually reverses; both feed the common overload KK1, then M1.
 wires += [
     {"from": "X1.L1", "to": "Q1.L1"}, {"from": "X1.L2", "to": "Q1.L2"}, {"from": "X1.L3", "to": "Q1.L3"},
     {"from": "Q1.T1", "to": "F1.L1"}, {"from": "Q1.T2", "to": "F1.L2"}, {"from": "Q1.T3", "to": "F1.L3"},
     {"from": "F1.T1", "to": "KM_run.L1"}, {"from": "F1.T2", "to": "KM_run.L2"}, {"from": "F1.T3", "to": "KM_run.L3"},
-    {"from": "KM_run.T1", "to": "KK1.L1"}, {"from": "KM_run.T2", "to": "KK1.L2"}, {"from": "KM_run.T3", "to": "KK1.L3"},
-    {"from": "KK1.T1", "to": "M1.U"}, {"from": "KK1.T2", "to": "M1.V"}, {"from": "KK1.T3", "to": "M1.W"},
+    # KM_run outputs feed both direction contactors (line side)
     {"from": "KM_run.T1", "to": "KM_up.L1", "waypoints": [[590, 590], [590, 488], [890, 488]]},
     {"from": "KM_run.T2", "to": "KM_up.L2", "waypoints": [[600, 590], [600, 496], [920, 496]]},
     {"from": "KM_run.T3", "to": "KM_up.L3", "waypoints": [[610, 590], [610, 504], [950, 504]]},
     {"from": "KM_run.T1", "to": "KM_dn.L1", "waypoints": [[575, 590], [575, 640], [890, 640], [890, 788]]},
     {"from": "KM_run.T2", "to": "KM_dn.L2", "waypoints": [[585, 590], [585, 650], [920, 650], [920, 788]]},
     {"from": "KM_run.T3", "to": "KM_dn.L3", "waypoints": [[595, 590], [595, 660], [950, 660], [950, 788]]},
+    # KM_up -> KK1 (straight through)
+    {"from": "KM_up.T1", "to": "KK1.L1", "waypoints": [[1000, 645], [1160, 645]]},
+    {"from": "KM_up.T2", "to": "KK1.L2", "waypoints": [[1050, 655], [1190, 655]]},
+    {"from": "KM_up.T3", "to": "KK1.L3", "waypoints": [[1060, 665], [1220, 665]]},
+    # KM_dn -> KK1 (L2/L3 SWAPPED: reversal); risers merge into the matching phase bus
+    {"from": "KM_dn.T1", "to": "KK1.L1", "waypoints": [[1000, 860], [1000, 645]]},
+    {"from": "KM_dn.T2", "to": "KK1.L3", "waypoints": [[1080, 860], [1080, 665]]},
+    {"from": "KM_dn.T3", "to": "KK1.L2", "waypoints": [[1100, 860], [1100, 655]]},
+    # KK1 -> motor
+    {"from": "KK1.T1", "to": "M1.U", "waypoints": [[1160, 740], [1420, 740]]},
+    {"from": "KK1.T2", "to": "M1.V", "waypoints": [[1190, 725], [1450, 725]]},
+    {"from": "KK1.T3", "to": "M1.W", "waypoints": [[1220, 710], [1480, 710]]},
+]
+# ELECTRICAL CROSS-INTERLOCK: each direction coil is fed through the other
+# contactor's NC aux (21-22), so both can never energize together.
+wires += [
+    {"from": "SelUp.14", "to": "KM_dn.21", "waypoints": [[1410, 858], [1050, 858]]},
+    {"from": "KM_dn.22", "to": "KM_up.A1", "waypoints": [[990, 810], [990, 570]]},
+    {"from": "SelDn.14", "to": "KM_up.21", "waypoints": [[1410, 700], [1040, 700], [1040, 545]]},
+    {"from": "KM_up.22", "to": "KM_dn.A1", "waypoints": [[975, 510], [975, 870]]},
 ]
 # control feed
-wires.append({"from": "F1.T1", "to": "KK1.95"})
-wires.append({"from": "KK1.96", "to": "F4.L", "waypoints": [[760, 620], [760, 250], [1340, 250], [1340, 290]]})
+wires.append({"from": "F1.T1", "to": "KK1.95", "waypoints": [[340, 438], [1230, 438], [1230, 560]]})
+wires.append({"from": "KK1.96", "to": "F4.L", "waypoints": [[1360, 610], [1360, 350]]})
 wires += [
-    {"from": "F4.T", "to": "CAM1.GC"},
     {"from": "KP.A2", "to": "N1.T", "waypoints": [[1360, 1310], [1360, 1420], [120, 1420], [120, 1250]]},
     {"from": "R1.T", "to": "KP.13"},
     {"from": "KP.14", "to": "KT_dwell.A1", "waypoints": [[1410, 1310], [1405, 1310], [1405, 1500]]},
@@ -62,9 +82,7 @@ wires += [
     {"from": "KT_dwell.16", "to": "SelDn.13", "waypoints": [[1330, 1610], [1420, 1610], [1420, 1090]]},
     {"from": "R1.T", "to": "KT_dwell.15", "waypoints": [[1340, 1310], [1290, 1310], [1290, 1560]]},
     {"from": "F4.T", "to": "KP.43", "waypoints": [[1350, 390], [1470, 390], [1470, 1300]]},
-    {"from": "KP.44", "to": "CAM1.COM", "waypoints": [[1470, 1380], [1470, 1430], [1400, 1430], [1400, 500]]},
-    {"from": "SelUp.14", "to": "KM_up.A1", "waypoints": [[1410, 1000], [1410, 600], [1035, 600], [1035, 597]]},
-    {"from": "SelDn.14", "to": "KM_dn.A1", "waypoints": [[1410, 1140], [1410, 900], [1035, 900], [1035, 897]]},
+    {"from": "KP.44", "to": "CAM1.COM", "waypoints": [[1460, 1400], [1930, 1400], [1930, 455], [1690, 455]]},
     {"from": "KM_run.A2", "to": "N1.T", "waypoints": [[595, 670], [595, 710], [120, 710], [120, 1250]]},
     {"from": "KM_up.A2", "to": "N1.T", "waypoints": [[1035, 650], [1035, 700], [120, 700], [120, 1250]]},
     {"from": "KM_dn.A2", "to": "N1.T", "waypoints": [[1035, 950], [1035, 1000], [120, 1000], [120, 1250]]},
@@ -83,7 +101,7 @@ for n in range(1, 11):
         {"id": f"H{n}", "type": "lamp", "label": f"H{n}", "x": 980, "y": y0, "params": {"color": "#ffb454"}},
     ]
     wires += [
-        {"from": "F4.T", "to": f"CAM1.GH{n}"},
+        {"from": "F4.T", "to": f"CAM1.GH{n}", "waypoints": [[1620, 415]]},
         {"from": f"CAM1.G{n}", "to": f"S{n}.13"},
         {"from": f"S{n}.14", "to": f"K{n}.14"},
         {"from": f"CAM1.G{n}", "to": f"K{n}.13"},
@@ -134,5 +152,5 @@ demo = [
     {"wait": 2.5},
 ]
 
-json.dump({"name": "elevator-10floor", "description": "Full 10-story relay elevator. Car position is a two-deck floor cam (CAM1): deck A routes 'call pending' power to the current floor, deck B (complement) enables call registration for every floor the car is NOT at. Floor calls latch in relays K1..K10 (lamps H1..H10); the run contactor KM_run dies when the cam reaches a called floor (F(n) through K(n).21-22), which also resets that call via its deck-B seal — so pending calls auto-dispatch. Direction selectors (SelUp/SelDn) choose KM_up/KM_dn. Try: press a floor button, then advance CAM1 floor by floor.", "components": comps, "wires": [w for w in wires if w], "demo": demo}, open("circuits/elevator-10floor.json", "w"), indent=1)
+json.dump({"name": "elevator-10floor", "description": "Full 10-story relay elevator. Car position is a two-deck floor cam (CAM1): deck A routes 'call pending' power to the current floor, deck B (complement) enables call registration for every floor the car is NOT at. Floor calls latch in relays K1..K10 (lamps H1..H10); the run contactor KM_run dies when the cam reaches a called floor (F(n) through K(n).21-22), which also resets that call via its deck-B seal — so pending calls auto-dispatch. The power path runs X1-Q1-F1-KM_run-{KM_up|KM_dn}-KK1-M1: KM_up passes the phases straight through while KM_dn swaps L2/L3, so the hoist motor genuinely reverses for down calls; NC aux cross-interlocks (KM_up 21-22 in the KM_dn coil path and vice versa) make it impossible to energize both. Try: press a floor button, then advance CAM1 floor by floor.", "components": comps, "wires": [w for w in wires if w], "demo": demo}, open("circuits/elevator-10floor.json", "w"), indent=1)
 print(f"elevator-10floor.json: {len(comps)} components, {len([w for w in wires if w])} wires")

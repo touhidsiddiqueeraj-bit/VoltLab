@@ -372,31 +372,38 @@ export class Engine {
         termKeys.push(`${c.id}.${t}`);
       }
     }
-    const dsu = new DSU(termKeys.length);
-    const U = (a, b) => dsu.union(termIdx.get(a), termIdx.get(b));
-
-    for (const w of this.wires) U(w.from, w.to);
-
-    for (const c of comps) {
-      for (const [a, b] of conductingPoles(c)) U(`${c.id}.${a}`, `${c.id}.${b}`);
-    }
-
-    // ---- 2. seed phases from sources ----
-    const rootPhases = new Map(); // root -> Set(phase)
+    let dsu = new DSU(termKeys.length);
+    let rootPhases = new Map();
     const seed = (term, phase) => {
       const root = dsu.find(termIdx.get(term));
       if (!rootPhases.has(root)) rootPhases.set(root, new Set());
       rootPhases.get(root).add(phase);
     };
-    for (const c of comps) {
-      if (c.type === 'supply3') {
-        const lost = this.faults.phase_loss?.phase;
-        for (const p of ['L1', 'L2', 'L3', 'N']) {
-          if (p === lost) continue;
-          seed(`${c.id}.${p}`, p);
+
+    // Rebuilds the netlist from the CURRENT device states. Real contactors act
+    // sequentially: the one that picks up first immediately opens its NC aux, so
+    // an electrically cross-interlocked pair can never energize together. The
+    // solver mirrors that: whenever a coil changes state mid-tick, the netlist
+    // is rebuilt before the next device in the same tick is evaluated.
+    const buildNets = () => {
+      dsu = new DSU(termKeys.length);
+      const U = (a, b) => dsu.union(termIdx.get(a), termIdx.get(b));
+      for (const w of this.wires) U(w.from, w.to);
+      for (const c of comps) {
+        for (const [a, b] of conductingPoles(c)) U(`${c.id}.${a}`, `${c.id}.${b}`);
+      }
+      rootPhases = new Map();
+      for (const c of comps) {
+        if (c.type === 'supply3') {
+          const lost = this.faults.phase_loss?.phase;
+          for (const p of ['L1', 'L2', 'L3', 'N']) {
+            if (p === lost) continue;
+            seed(`${c.id}.${p}`, p);
+          }
         }
       }
-    }
+    };
+    buildNets();
 
     const phasesOf = (ref) => rootPhases.get(dsu.find(termIdx.get(ref))) || EMPTY_SET;
     const across = (a, b) => {
@@ -407,7 +414,7 @@ export class Engine {
     };
     const connected = (a, b) => dsu.find(termIdx.get(a)) === dsu.find(termIdx.get(b));
 
-    // ---- 3. evaluate devices against this tick's netlist ----
+    // ---- 2. evaluate devices against this tick's netlist ----
     for (const c of comps) {
       switch (c.type) {
         case 'contactor': {
@@ -415,6 +422,7 @@ export class Engine {
           if (v !== c.state.energized) {
             c.state.energized = v;
             this.log(`${c.label} coil ${v ? 'ENERGIZED' : 'DROPPED'}`, v ? 'info' : 'warn');
+            buildNets(); // poles changed — later devices see the new circuit
           }
           break;
         }

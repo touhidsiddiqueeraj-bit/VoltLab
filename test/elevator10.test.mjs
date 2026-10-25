@@ -39,6 +39,8 @@ test('call registers, car runs, serves the floor and resets', () => {
   assert.equal(st(e, 'H5').lit, true, 'floor 5 lamp lit');
   assert.equal(st(e, 'KM_run').energized, true, 'run contactor engaged');
   assert.equal(st(e, 'KM_up').energized, true, 'up contactor engaged (SelUp on)');
+  assert.equal(st(e, 'M1').dir, 1, 'phase order through KM_up drives the motor forward');
+  assert.ok(st(e, 'M1').speed > 0.2, `hoist motor running up (speed ${st(e, 'M1').speed.toFixed(2)})`);
   e.pressButton('S5', false);
   e.advance(2);
   assert.equal(st(e, 'KM_run').energized, true, 'still running mid-shaft');
@@ -84,10 +86,25 @@ test('down direction via SelDn', () => {
   e.pressButton('S3', false);
   assert.equal(st(e, 'KM_dn').energized, true, 'down contactor engaged');
   assert.equal(st(e, 'KM_up').energized, false, 'up contactor off');
+  assert.equal(st(e, 'M1').dir, -1, 'KM_dn swaps L2/L3 — motor actually reverses');
+  assert.ok(st(e, 'M1').speed < -0.2, `hoist motor running down (speed ${st(e, 'M1').speed.toFixed(2)})`);
   travel(e, 1, 3);
   e.step(0.3);
   assert.equal(st(e, 'KM_run').energized, false);
   assert.equal(st(e, 'K3').energized, false);
+});
+
+test('cross-interlock: both selectors on cannot energize both contactors', () => {
+  const e = load();
+  e.setSwitch('SelDn', true); // SelUp already on — both coils fed
+  e.pressButton('S5');
+  e.advance(2);
+  e.pressButton('S5', false);
+  assert.equal(st(e, 'KM_run').energized, true);
+  const up = st(e, 'KM_up').energized, dn = st(e, 'KM_dn').energized;
+  assert.ok(up !== dn, `NC cross-interlock: not both energized (up=${up}, dn=${dn})`);
+  // whichever picked up, the other's path is broken by its NC aux
+  assert.equal(up ? st(e, 'KM_dn').energized : st(e, 'KM_up').energized, false);
 });
 
 test('calls for the car\'s current floor cannot register (car is there)', () => {

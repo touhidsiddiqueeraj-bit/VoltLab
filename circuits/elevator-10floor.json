@@ -1,6 +1,6 @@
 {
  "name": "elevator-10floor",
- "description": "Full 10-story relay elevator. Car position is a two-deck floor cam (CAM1): deck A routes 'call pending' power to the current floor, deck B (complement) enables call registration for every floor the car is NOT at. Floor calls latch in relays K1..K10 (lamps H1..H10); the run contactor KM_run dies when the cam reaches a called floor (F(n) through K(n).21-22), which also resets that call via its deck-B seal \u2014 so pending calls auto-dispatch. Direction selectors (SelUp/SelDn) choose KM_up/KM_dn. Try: press a floor button, then advance CAM1 floor by floor.",
+ "description": "Full 10-story relay elevator. Car position is a two-deck floor cam (CAM1): deck A routes 'call pending' power to the current floor, deck B (complement) enables call registration for every floor the car is NOT at. Floor calls latch in relays K1..K10 (lamps H1..H10); the run contactor KM_run dies when the cam reaches a called floor (F(n) through K(n).21-22), which also resets that call via its deck-B seal \u2014 so pending calls auto-dispatch. The power path runs X1-Q1-F1-KM_run-{KM_up|KM_dn}-KK1-M1: KM_up passes the phases straight through while KM_dn swaps L2/L3, so the hoist motor genuinely reverses for down calls; NC aux cross-interlocks (KM_up 21-22 in the KM_dn coil path and vice versa) make it impossible to energize both. Try: press a floor button, then advance CAM1 floor by floor.",
  "components": [
   {
    "id": "X1",
@@ -34,17 +34,6 @@
    "y": 460
   },
   {
-   "id": "KK1",
-   "type": "overload",
-   "label": "KK1",
-   "x": 700,
-   "y": 460,
-   "params": {
-    "flc": 15,
-    "trip_class": 10
-   }
-  },
-  {
    "id": "KM_up",
    "type": "contactor",
    "label": "KM_up",
@@ -59,11 +48,22 @@
    "y": 760
   },
   {
+   "id": "KK1",
+   "type": "overload",
+   "label": "KK1",
+   "x": 1140,
+   "y": 590,
+   "params": {
+    "flc": 15,
+    "trip_class": 10
+   }
+  },
+  {
    "id": "M1",
    "type": "motor3",
    "label": "M1 Hoist",
-   "x": 1160,
-   "y": 560,
+   "x": 1400,
+   "y": 760,
    "params": {
     "flc": 15,
     "load": 0.9
@@ -80,7 +80,7 @@
    "id": "CAM1",
    "type": "cam10",
    "label": "CAM1 Car pos",
-   "x": 1380,
+   "x": 1660,
    "y": 470,
    "state": {
     "position": 1
@@ -414,30 +414,6 @@
   },
   {
    "from": "KM_run.T1",
-   "to": "KK1.L1"
-  },
-  {
-   "from": "KM_run.T2",
-   "to": "KK1.L2"
-  },
-  {
-   "from": "KM_run.T3",
-   "to": "KK1.L3"
-  },
-  {
-   "from": "KK1.T1",
-   "to": "M1.U"
-  },
-  {
-   "from": "KK1.T2",
-   "to": "M1.V"
-  },
-  {
-   "from": "KK1.T3",
-   "to": "M1.W"
-  },
-  {
-   "from": "KM_run.T1",
    "to": "KM_up.L1",
    "waypoints": [
     [
@@ -557,34 +533,222 @@
    ]
   },
   {
+   "from": "KM_up.T1",
+   "to": "KK1.L1",
+   "waypoints": [
+    [
+     1000,
+     645
+    ],
+    [
+     1160,
+     645
+    ]
+   ]
+  },
+  {
+   "from": "KM_up.T2",
+   "to": "KK1.L2",
+   "waypoints": [
+    [
+     1050,
+     655
+    ],
+    [
+     1190,
+     655
+    ]
+   ]
+  },
+  {
+   "from": "KM_up.T3",
+   "to": "KK1.L3",
+   "waypoints": [
+    [
+     1060,
+     665
+    ],
+    [
+     1220,
+     665
+    ]
+   ]
+  },
+  {
+   "from": "KM_dn.T1",
+   "to": "KK1.L1",
+   "waypoints": [
+    [
+     1000,
+     860
+    ],
+    [
+     1000,
+     645
+    ]
+   ]
+  },
+  {
+   "from": "KM_dn.T2",
+   "to": "KK1.L3",
+   "waypoints": [
+    [
+     1080,
+     860
+    ],
+    [
+     1080,
+     665
+    ]
+   ]
+  },
+  {
+   "from": "KM_dn.T3",
+   "to": "KK1.L2",
+   "waypoints": [
+    [
+     1100,
+     860
+    ],
+    [
+     1100,
+     655
+    ]
+   ]
+  },
+  {
+   "from": "KK1.T1",
+   "to": "M1.U",
+   "waypoints": [
+    [
+     1160,
+     740
+    ],
+    [
+     1420,
+     740
+    ]
+   ]
+  },
+  {
+   "from": "KK1.T2",
+   "to": "M1.V",
+   "waypoints": [
+    [
+     1190,
+     725
+    ],
+    [
+     1450,
+     725
+    ]
+   ]
+  },
+  {
+   "from": "KK1.T3",
+   "to": "M1.W",
+   "waypoints": [
+    [
+     1220,
+     710
+    ],
+    [
+     1480,
+     710
+    ]
+   ]
+  },
+  {
+   "from": "SelUp.14",
+   "to": "KM_dn.21",
+   "waypoints": [
+    [
+     1410,
+     858
+    ],
+    [
+     1050,
+     858
+    ]
+   ]
+  },
+  {
+   "from": "KM_dn.22",
+   "to": "KM_up.A1",
+   "waypoints": [
+    [
+     990,
+     810
+    ],
+    [
+     990,
+     570
+    ]
+   ]
+  },
+  {
+   "from": "SelDn.14",
+   "to": "KM_up.21",
+   "waypoints": [
+    [
+     1410,
+     700
+    ],
+    [
+     1040,
+     700
+    ],
+    [
+     1040,
+     545
+    ]
+   ]
+  },
+  {
+   "from": "KM_up.22",
+   "to": "KM_dn.A1",
+   "waypoints": [
+    [
+     975,
+     510
+    ],
+    [
+     975,
+     870
+    ]
+   ]
+  },
+  {
    "from": "F1.T1",
-   "to": "KK1.95"
+   "to": "KK1.95",
+   "waypoints": [
+    [
+     340,
+     438
+    ],
+    [
+     1230,
+     438
+    ],
+    [
+     1230,
+     560
+    ]
+   ]
   },
   {
    "from": "KK1.96",
    "to": "F4.L",
    "waypoints": [
     [
-     760,
-     620
+     1360,
+     610
     ],
     [
-     760,
-     250
-    ],
-    [
-     1340,
-     250
-    ],
-    [
-     1340,
-     290
+     1360,
+     350
     ]
    ]
-  },
-  {
-   "from": "F4.T",
-   "to": "CAM1.GC"
   },
   {
    "from": "KP.A2",
@@ -763,64 +927,20 @@
    "to": "CAM1.COM",
    "waypoints": [
     [
-     1470,
-     1380
+     1460,
+     1400
     ],
     [
-     1470,
-     1430
+     1930,
+     1400
     ],
     [
-     1400,
-     1430
+     1930,
+     455
     ],
     [
-     1400,
-     500
-    ]
-   ]
-  },
-  {
-   "from": "SelUp.14",
-   "to": "KM_up.A1",
-   "waypoints": [
-    [
-     1410,
-     1000
-    ],
-    [
-     1410,
-     600
-    ],
-    [
-     1035,
-     600
-    ],
-    [
-     1035,
-     597
-    ]
-   ]
-  },
-  {
-   "from": "SelDn.14",
-   "to": "KM_dn.A1",
-   "waypoints": [
-    [
-     1410,
-     1140
-    ],
-    [
-     1410,
-     900
-    ],
-    [
-     1035,
-     900
-    ],
-    [
-     1035,
-     897
+     1690,
+     455
     ]
    ]
   },
@@ -946,7 +1066,13 @@
   },
   {
    "from": "F4.T",
-   "to": "CAM1.GH1"
+   "to": "CAM1.GH1",
+   "waypoints": [
+    [
+     1620,
+     415
+    ]
+   ]
   },
   {
    "from": "CAM1.G1",
@@ -994,7 +1120,13 @@
   },
   {
    "from": "F4.T",
-   "to": "CAM1.GH2"
+   "to": "CAM1.GH2",
+   "waypoints": [
+    [
+     1620,
+     415
+    ]
+   ]
   },
   {
    "from": "CAM1.G2",
@@ -1042,7 +1174,13 @@
   },
   {
    "from": "F4.T",
-   "to": "CAM1.GH3"
+   "to": "CAM1.GH3",
+   "waypoints": [
+    [
+     1620,
+     415
+    ]
+   ]
   },
   {
    "from": "CAM1.G3",
@@ -1090,7 +1228,13 @@
   },
   {
    "from": "F4.T",
-   "to": "CAM1.GH4"
+   "to": "CAM1.GH4",
+   "waypoints": [
+    [
+     1620,
+     415
+    ]
+   ]
   },
   {
    "from": "CAM1.G4",
@@ -1138,7 +1282,13 @@
   },
   {
    "from": "F4.T",
-   "to": "CAM1.GH5"
+   "to": "CAM1.GH5",
+   "waypoints": [
+    [
+     1620,
+     415
+    ]
+   ]
   },
   {
    "from": "CAM1.G5",
@@ -1186,7 +1336,13 @@
   },
   {
    "from": "F4.T",
-   "to": "CAM1.GH6"
+   "to": "CAM1.GH6",
+   "waypoints": [
+    [
+     1620,
+     415
+    ]
+   ]
   },
   {
    "from": "CAM1.G6",
@@ -1234,7 +1390,13 @@
   },
   {
    "from": "F4.T",
-   "to": "CAM1.GH7"
+   "to": "CAM1.GH7",
+   "waypoints": [
+    [
+     1620,
+     415
+    ]
+   ]
   },
   {
    "from": "CAM1.G7",
@@ -1282,7 +1444,13 @@
   },
   {
    "from": "F4.T",
-   "to": "CAM1.GH8"
+   "to": "CAM1.GH8",
+   "waypoints": [
+    [
+     1620,
+     415
+    ]
+   ]
   },
   {
    "from": "CAM1.G8",
@@ -1330,7 +1498,13 @@
   },
   {
    "from": "F4.T",
-   "to": "CAM1.GH9"
+   "to": "CAM1.GH9",
+   "waypoints": [
+    [
+     1620,
+     415
+    ]
+   ]
   },
   {
    "from": "CAM1.G9",
@@ -1378,7 +1552,13 @@
   },
   {
    "from": "F4.T",
-   "to": "CAM1.GH10"
+   "to": "CAM1.GH10",
+   "waypoints": [
+    [
+     1620,
+     415
+    ]
+   ]
   },
   {
    "from": "CAM1.G10",
@@ -1428,12 +1608,6 @@
  "demo": [
   {
    "caption": "VoltLab \u2014 10-story relay elevator (car at floor 1)"
-  },
-  {
-   "fit": true
-  },
-  {
-   "wait": 2.5
   },
   {
    "wait": 2.5
@@ -1641,15 +1815,6 @@
   },
   {
    "caption": "Floor 2 served \u2014 end of demo"
-  },
-  {
-   "wait": 2.5
-  },
-  {
-   "fit": true
-  },
-  {
-   "caption": "End of demo"
   },
   {
    "wait": 2.5

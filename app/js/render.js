@@ -112,10 +112,15 @@ export function renderScene(svg, snapshot, ui, rotorAngles) {
     const draw = SYMBOLS[c.type];
     if (!draw) continue;
     const selected = ui.selected === c.id;
+    const { w: cw, h: ch } = DEVICE_TYPES[c.type].size;
     // symbols draw in absolute canvas coordinates (comp.x/y baked into the symbol fns)
     csvg += `<g class="sym${selected ? ' selected' : ''}" data-comp="${c.id}">`;
     csvg += `<g class="sym-inner" data-comp-inner="${c.id}">${draw(c, c.state, { rotorAngle: 0 })}</g>`;
-    csvg += `<rect class="sel-box" x="${c.x - 12}" y="${c.y - 12}" width="${DEVICE_TYPES[c.type].size.w + 24}" height="${DEVICE_TYPES[c.type].size.h + 24}" rx="6"/>`;
+    // transparent hit area over the whole symbol bbox: symbols are line art with
+    // big unpainted interiors, so without this, clicks between strokes fall
+    // through to the grid background and select/drag feels broken
+    csvg += `<rect class="hit-box" x="${c.x - 4}" y="${c.y - 4}" width="${cw + 8}" height="${ch + 8}" fill="none" pointer-events="all"/>`;
+    csvg += `<rect class="sel-box" x="${c.x - 12}" y="${c.y - 12}" width="${cw + 24}" height="${ch + 24}" rx="6"/>`;
     csvg += '</g>';
   }
   setLayer(svg, 'comps-layer', csvg);

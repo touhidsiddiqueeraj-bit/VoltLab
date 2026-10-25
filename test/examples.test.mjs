@@ -36,6 +36,7 @@ test('elevator: call up latches, top limit releases', () => {
   e.advance(2);
   assert.equal(st(e, 'KM1').energized, true, 'seal-in holds');
   assert.ok(st(e, 'M1').speed > 0.5, 'hoist motor running');
+  assert.equal(st(e, 'M1').dir, 1, 'KM1 straight-through phase order runs the motor forward');
   assert.equal(st(e, 'H1').lit, true, 'going-up lamp lit');
   e.pressButton('S3'); // car reaches top
   e.step(0.2);
@@ -54,9 +55,14 @@ test('elevator: call down works and bottom limit releases', () => {
   e.advance(1);
   assert.equal(st(e, 'KM2').energized, true);
   assert.equal(st(e, 'H2').lit, true);
+  assert.equal(st(e, 'M1').dir, -1, 'KM2 swaps L2/L3 — hoist motor actually reverses');
+  assert.ok(st(e, 'M1').speed < -0.5, `motor running in reverse (speed ${st(e, 'M1').speed.toFixed(2)})`);
   e.pressButton('S4'); // car reaches bottom
   e.step(0.2);
   assert.equal(st(e, 'KM2').energized, false, 'bottom limit drops KM2');
+  e.pressButton('S4', false);
+  e.advance(5);
+  assert.ok(st(e, 'M1').speed > -0.06, 'motor coasted back to a stop');
 });
 
 test('elevator: cross-interlock prevents both contactors', () => {

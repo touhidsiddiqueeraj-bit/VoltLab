@@ -9,7 +9,19 @@
 </head>
 <body>
   <header id="toolbar">
-    <div class="brand"><span class="bolt">⚡</span> <b>VoltLab</b><span class="sub">motor control simulator</span></div>
+    <div class="brand">
+      <svg class="brand-logo" viewBox="0 0 512 512" aria-hidden="true">
+        <defs>
+          <linearGradient id="vl-bolt-g" x1="0" y1="0" x2="0.35" y2="1">
+            <stop offset="0" stop-color="#ffe3b0"/>
+            <stop offset="0.5" stop-color="#ffb454"/>
+            <stop offset="1" stop-color="#e0862d"/>
+          </linearGradient>
+        </defs>
+        <path d="M300,80 L160,280 L240,280 L190,432 L352,220 L268,220 L330,80 Z" fill="url(#vl-bolt-g)"/>
+      </svg>
+      <b>VoltLab</b><span class="sub">motor control simulator</span>
+    </div>
 
     <select id="circuit-select" title="Circuit library"></select>
 
@@ -82,6 +94,9 @@
 
   <main id="workspace">
     <aside id="palette">
+      <div class="palette-search">
+        <input id="palette-filter" type="search" placeholder="Filter components…" autocomplete="off" spellcheck="false">
+      </div>
       <div id="palette-groups"></div>
       <p class="hint">Click a component, then the canvas, to place it.<br>
       Click two terminals to wire them.<br>
@@ -105,6 +120,21 @@
         <g id="comps-layer"></g>
         <g id="ghost-layer"></g>
       </svg></div>
+      <div id="welcome" class="hidden">
+        <svg viewBox="0 0 512 512" class="welcome-logo" aria-hidden="true">
+          <defs>
+            <linearGradient id="wl-bolt" x1="0" y1="0" x2="0.35" y2="1">
+              <stop offset="0" stop-color="#ffe3b0"/>
+              <stop offset="0.5" stop-color="#ffb454"/>
+              <stop offset="1" stop-color="#e0862d"/>
+            </linearGradient>
+          </defs>
+          <path d="M300,80 L160,280 L240,280 L190,432 L352,220 L268,220 L330,80 Z" fill="url(#wl-bolt)"/>
+        </svg>
+        <h2>Empty canvas</h2>
+        <p>Pick a component from the palette on the left and click here to place it,<br>
+        or load one of the worked examples from the <b>Circuit ▸ Load selected circuit</b> menu.</p>
+      </div>
       <div id="toast" class="hidden"></div>
     </section>
 
@@ -132,6 +162,7 @@
     <div id="statusbar">
       <span id="st-conn" class="dot off"></span>
       <span id="st-circuit">—</span>
+      <span id="st-count"></span>
       <span id="st-time">t = 0.0 s</span>
       <span id="st-run">paused</span>
       <span id="st-faults"></span>

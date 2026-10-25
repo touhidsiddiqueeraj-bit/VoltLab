@@ -1,6 +1,6 @@
 {
  "name": "elevator-2floor",
- "description": "Two-floor elevator control: call up (S1) / call down (S2) latch their contactors (KM1 up, KM2 down) with seal-in aux contacts; top/bottom limit switches (S3/S4) stop the car at the ends; NC aux cross-interlock (KM1 21-22 in the down path, KM2 21-22 in the up path) prevents both contactors ever energizing together; thermal overload KK1 protects the hoist motor. Simulate arrival by pressing the limit switch.",
+ "description": "Two-floor elevator control: call up (S1) / call down (S2) latch their contactors (KM1 up, KM2 down) with seal-in aux contacts; top/bottom limit switches (S3/S4) stop the car at the ends; NC aux cross-interlock (KM1 21-22 in the down path, KM2 21-22 in the up path) prevents both contactors ever energizing together; KM2 swaps L2/L3 so the hoist motor actually reverses; thermal overload KK1 protects it. Simulate arrival by pressing the limit switch.",
  "components": [
   {
    "id": "X1",
@@ -284,7 +284,7 @@
   },
   {
    "from": "KM2.T2",
-   "to": "KK1.L2",
+   "to": "KK1.L3",
    "waypoints": [
     [
      660,
@@ -292,13 +292,13 @@
     ],
     [
      660,
-     655
+     665
     ]
    ]
   },
   {
    "from": "KM2.T3",
-   "to": "KK1.L3",
+   "to": "KK1.L2",
    "waypoints": [
     [
      670,
@@ -306,7 +306,7 @@
     ],
     [
      670,
-     665
+     655
     ]
    ]
   },

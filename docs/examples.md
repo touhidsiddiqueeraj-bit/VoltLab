@@ -72,13 +72,15 @@ inspector; trip KK2 and confirm M1 stops too.
 
 ## elevator-2floor
 
-The minimal elevator: call buttons latch per direction, up/down contactors KM_up/KM_dn
+The minimal elevator: call buttons latch per direction, up/down contactors KM1/KM2
 drive the hoist between two limit switches, NC cross-interlocks prevent reversing while
-moving, KK1 guards the hoist motor. Good for understanding the *call-latch* pattern
+moving, KK1 guards the hoist motor. The down contactor **swaps L2/L3**, so the hoist
+motor visibly reverses between calls (check the operator panel: clockwise going up,
+counter-clockwise going down). Good for understanding the *call-latch* pattern
 before looking at ten floors of it.
 
-**Try it:** call the car from the other floor, watch the direction contactor latch and
-the limit switch kill the run contactor at arrival.
+**Try it:** call the car from the other floor, watch the direction contactor latch,
+the motor spin the other way, and the limit switch kill the run contactor at arrival.
 
 ---
 
@@ -86,7 +88,7 @@ the limit switch kill the run contactor at arrival.
 
 ![10-story relay elevator overview](media/elevator-10floor.png)
 
-A **full 10-story relay elevator** in plain relay logic — 46 components, 169 wires, and
+A **full 10-story relay elevator** in plain relay logic — 46 components, 174 wires, and
 no microcontroller anywhere. Built by [`scripts/generate_elevator10.py`](../scripts/generate_elevator10.py);
 its per-floor branches are a great study in generated-but-readable schematics.
 
@@ -100,6 +102,12 @@ Key ideas:
   seal-ins and lamps H1–H10.
 - **Dispatch chain:** a call at floor n → K(n) → KP (dispatch) → KM_run, gated by the
   cam decks so the car only starts when called *away* from its current floor.
+- **Real reversing power path:** KM_run feeds both direction contactors; KM_up passes
+  the phases straight through while KM_dn swaps L2/L3, so the hoist motor genuinely
+  reverses on down travel. NC aux cross-interlocks (KM_up 21-22 in the KM_dn coil
+  path and vice versa) make simultaneous energizing electrically impossible — try
+  switching both SelUp and SelDn on and calling a floor: exactly one contactor
+  picks up.
 - **Auto-reset:** when the cam reaches a called floor, that call resets through the
   complement deck; remaining calls re-dispatch automatically after a 1.5 s dwell
   (`KT_dwell`).

@@ -1,4 +1,4 @@
-# ⚡ VoltLab — Motor Control Circuit Simulator
+# <picture><source media="(prefers-color-scheme: dark)" srcset="docs/media/icon-64.png"><img src="docs/media/icon-64.png" width="64" align="left" alt="VoltLab logo"></picture> VoltLab — Motor Control Circuit Simulator
 
 [![CI](https://github.com/touhidsiddiqueeraj-bit/VoltLab/actions/workflows/ci.yml/badge.svg)](https://github.com/touhidsiddiqueeraj-bit/VoltLab/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -14,6 +14,8 @@ simulation: phase-colored wires, inrush current, overload trips, coast-down.
 
 And the twist: the whole app is **agent-controllable over MCP** — an LLM agent can build,
 wire, break, fault, document and film circuits entirely through tool calls.
+
+<img src="docs/media/logo-card.png" width="240" align="right" alt="VoltLab logo">
 
 ![VoltLab running the DOL starter demo](docs/media/dol-starter-dark.png)
 
@@ -90,7 +92,7 @@ exercises per circuit live in [`docs/examples.md`](docs/examples.md).
 | `reversing-starter` | Forward/reverse contactors, phase-swap wiring, electrical interlock that makes simultaneous energizing impossible |
 | `timer-sequence` | On-delay timer starts a second conveyor motor 3 s after the first |
 | `elevator-2floor` | Call latching for up/down contactors, travel limits, NC cross-interlock, hoist overload |
-| `elevator-10floor` | **Full 10-story relay elevator**: 3-deck floor cam = car position, per-floor call relays K1–K10, auto-reset via complement decks, dispatch chain with dwell timer — 46 components, 169 wires |
+| `elevator-10floor` | **Full 10-story relay elevator**: 3-deck floor cam = car position, per-floor call relays K1–K10, auto-reset via complement decks, dispatch chain with dwell timer, reversing contactors with phase swap + NC cross-interlock — 46 components, 174 wires |
 
 ![The 10-story relay elevator circuit](docs/media/elevator-10floor.png)
 
@@ -108,6 +110,7 @@ contactors and the 3-deck floor cam.*
 | [docs/mcp.md](docs/mcp.md) | Complete 26-tool MCP reference + raw HTTP equivalents + worked agent session |
 | [docs/circuit-format.md](docs/circuit-format.md) | The circuit JSON schema — components, wires, waypoints, demo scripts |
 | [docs/examples.md](docs/examples.md) | Guided tour of every example circuit with scenarios to try |
+| [docs/apk.md](docs/apk.md) | Viability of shipping VoltLab as an Android APK (spoiler: yes, two tiers) |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Dev setup, test layout, how to add devices and circuits |
 
 ## Agent control (MCP)
@@ -185,12 +188,26 @@ perform the action.
 ## Tests & packaging
 
 ```bash
-npm test                        # engine + example-circuit tests + MCP end-to-end (31 tests)
+npm test                        # engine + example-circuit tests + MCP end-to-end (32 tests)
 node --test test/dol.test.mjs   # just the DOL physics scenario (14 tests)
 npm start -- --smoke            # Electron headless self-test → prints SMOKE OK
 npm start -- --screenshot=out.png   # load demo, capture PNG, exit
-npm run package                 # standalone linux-x64 build → dist/VoltLab-linux-x64
+npm run package                 # unpackaged build for the current OS → dist/
+npm run dist                    # installers for the current OS (electron-builder)
 ```
+
+### Installers & CI
+
+Every push of a `v*` tag (or *Actions → Release → Run workflow*) builds signed-off
+installers on all three desktops and attaches them to a draft GitHub Release:
+
+| Platform | Artifacts |
+|---|---|
+| Windows | `VoltLab-Setup-x.y.z.exe` (NSIS installer) + `VoltLab-Portable-x.y.z.exe` |
+| macOS | `VoltLab-x.y.z-arm64.dmg` + `VoltLab-x.y.z-x64.dmg` (unsigned — right-click → Open) |
+| Linux | `VoltLab-x.y.z-x86_64.AppImage` + `voltlab_x.y.z_amd64.deb` |
+
+Plain `git tag v1.1.0 && git push --tags` is all it takes to cut a release.
 
 - Engine tests drive the real DOL scenario headlessly: pick-up, seal-in, trip timing,
   phase loss, fuse blowing — no browser involved.

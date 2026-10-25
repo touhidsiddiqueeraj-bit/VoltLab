@@ -16,6 +16,7 @@ const ui = {
   dragging: null,      // {id, dx, dy}
   cursor: { x: 0, y: 0 },
   zoom: 1,
+  pendingFit: false,   // auto-fit once after a circuit load
   snapshot: null
 };
 const rotorAngles = new Map();  // motor id -> visual angle (deg), animated between snapshots
@@ -72,7 +73,14 @@ function connect() {
   const es = new EventSource('/api/events');
   es.addEventListener('state', (ev) => {
     $('#st-conn').className = 'dot on';
-    ui.snapshot = JSON.parse(ev.data);
+    const snap = JSON.parse(ev.data);
+    // A drag in progress owns the dragged component's position — keep the
+    // locally-tracked coordinates instead of snapping back to the server copy.
+    if (ui.dragging?.moved) {
+      const c = snap.components.find(x => x.id === ui.dragging.id);
+      if (c) { c.x = ui.dragging.x; c.y = ui.dragging.y; }
+    }
+    ui.snapshot = snap;
     updateStatus(ui.snapshot);
     renderNow();
     renderLog(ui.snapshot);
@@ -89,6 +97,9 @@ function updateStatus(s) {
   if (s.circuit && sel.value !== s.circuit && [...sel.options].some(o => o.value === s.circuit)) sel.value = s.circuit;
   $('#st-time').textContent = `t = ${s.t.toFixed(1)} s`;
   $('#st-run').textContent = s.running ? 'running' : 'paused';
+  $('#st-count').textContent = `${s.components.length} comps · ${s.wires.length} wires`;
+  $('#welcome').classList.toggle('hidden', s.components.length > 0);
+  if (ui.pendingFit && s.circuit === ui.pendingFit && s.components.length > 0) { ui.pendingFit = null; zoomFit(); }
   const btn = $('#btn-run');
   btn.textContent = s.running ? '⏸ Pause' : '▶ Run';
   btn.classList.toggle('paused', !s.running);
@@ -254,6 +265,25 @@ function buildPalette() {
     ui.placing = type;
     document.querySelectorAll('.palette-item').forEach(i => i.classList.toggle('active', i.dataset.type === type));
   });
+
+  // live component filter — hides items and whole groups with no match
+  $('#palette-filter').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    for (const group of root.querySelectorAll('.palette-group')) {
+      let visible = 0;
+      for (const item of group.querySelectorAll('.palette-item')) {
+        const type = item.dataset.type;
+        const spec = DEVICE_TYPES[type];
+        const hit = !q || spec.label.toLowerCase().includes(q) || type.toLowerCase().includes(q);
+        item.style.display = hit ? '' : 'none';
+        if (hit) visible++;
+      }
+      group.style.display = visible ? '' : 'none';
+    }
+  });
+  $('#palette-filter').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.target.value = ''; e.target.dispatchEvent(new Event('input')); e.target.blur(); }
+  });
 }
 
 function cancelPlace() {
@@ -266,7 +296,30 @@ function cancelPlace() {
 function renderInspector() {
   const s = ui.snapshot;
   const body = $('#inspector-body');
-  if (!s || !ui.selected) { body.className = 'empty'; body.innerHTML = 'Nothing selected.<br>Click a component on the canvas.'; return; }
+  if (!s || !ui.selected) {
+    // circuit overview instead of a dead panel
+    body.className = 'empty';
+    if (s && s.components.length) {
+      const faults = Object.keys(s.faults || {});
+      const motors = s.components.filter(c => c.type === 'motor3');
+      const running = motors.filter(c => Math.abs(c.state.speed || 0) > 0.05);
+      body.innerHTML = `
+        <div class="insp-overview">
+          <div class="insp-title">${escapeHtml(s.circuit || 'canvas')}</div>
+          <div class="kv">
+            <span class="k">components</span><span class="v">${s.components.length}</span>
+            <span class="k">wires</span><span class="v">${s.wires.length}</span>
+            <span class="k">sim time</span><span class="v">${s.t.toFixed(1)} s</span>
+            <span class="k">motors</span><span class="v">${motors.length ? `${running.length}/${motors.length} running` : 'none'}</span>
+            <span class="k">faults</span><span class="v ${faults.length ? 'fault' : 'off'}">${faults.length ? faults.join(', ') : 'none'}</span>
+          </div>
+          <p class="insp-tip">Click a component to inspect and edit it.</p>
+        </div>`;
+    } else {
+      body.innerHTML = 'Nothing selected.<br>Click a component on the canvas.';
+    }
+    return;
+  }
   const c = s.components.find(x => x.id === ui.selected);
   if (!c) { ui.selected = null; return; }
   body.className = '';
@@ -332,15 +385,20 @@ function svgPoint(evt) {
 svg.addEventListener('mousemove', (e) => {
   const p = svgPoint(e);
   if (ui.dragging) {
-    const c = ui.snapshot?.components.find(x => x.id === ui.dragging.id);
-    if (c) { c.x = p.x - ui.dragging.dx; c.y = p.y - ui.dragging.dy; }
-    ui.dragging.dirty = true;
-    renderNow();
+    if (!ui.dragging.moved && (Math.abs(p.x - ui.dragging.startX) > 3 || Math.abs(p.y - ui.dragging.startY) > 3)) {
+      ui.dragging.moved = true;
+    }
+    if (ui.dragging.moved) {
+      const c = ui.snapshot?.components.find(x => x.id === ui.dragging.id);
+      if (c) {
+        c.x = p.x - ui.dragging.dx;
+        c.y = p.y - ui.dragging.dy;
+        ui.dragging.x = c.x;
+        ui.dragging.y = c.y;
+      }
+      renderNow();
+    }
     return;
-  }
-  if (ui.dragging && !ui.dragging.moved) {
-    const c = ui.snapshot?.components.find(x => x.id === ui.dragging.id);
-    if (c && (Math.abs(p.x - ui.dragging.dx - c.x) > 4 || Math.abs(p.y - ui.dragging.dy - c.y) > 4)) ui.dragging.moved = true;
   }
   if (p.x !== ui.cursor.x || p.y !== ui.cursor.y) {
     ui.cursor = p;
@@ -386,7 +444,7 @@ svg.addEventListener('pointerdown', (e) => {
     const id = sym.dataset.comp;
     ui.selected = id;
     const c = ui.snapshot?.components.find(x => x.id === id);
-    if (c) ui.dragging = { id, dx: p.x - c.x, dy: p.y - c.y, moved: false };
+    if (c) ui.dragging = { id, dx: p.x - c.x, dy: p.y - c.y, startX: p.x, startY: p.y, x: c.x, y: c.y, moved: false };
     renderNow();
   }
 });
@@ -403,8 +461,9 @@ svg.addEventListener('click', async (e) => {
 
 window.addEventListener('pointerup', (e) => {
   if (ui.dragging) {
-    const c = ui.snapshot?.components.find(x => x.id === ui.dragging.id);
-    if (c && ui.dragging.moved) cmd('move_component', { id: c.id, x: c.x, y: c.y });
+    if (ui.dragging.moved) {
+      cmd('move_component', { id: ui.dragging.id, x: ui.dragging.x, y: ui.dragging.y });
+    }
     ui.dragging = null;
   }
   if (!ui.snapshot || !(e.target.closest && e.target.closest('#canvas-wrap'))) return;
@@ -485,13 +544,14 @@ function applyZoom(z, focusClient) {
 }
 $('#btn-zoom-in').onclick = () => applyZoom(ui.zoom * 1.25);
 $('#btn-zoom-out').onclick = () => applyZoom(ui.zoom / 1.25);
-$('#btn-zoom-fit').onclick = () => {
-  if (!ui.snapshot) return;
+function zoomFit() {
+  if (!ui.snapshot || !ui.snapshot.components.length) return;
   let mx = 1000, my = 800;
   for (const c of ui.snapshot.components) mx = Math.max(mx, c.x + 150), my = Math.max(my, c.y + 150);
   const wrap = document.querySelector('#canvas-wrap');
   applyZoom(Math.min((wrap.clientWidth - 30) / mx, (wrap.clientHeight - 30) / my));
-};
+}
+$('#btn-zoom-fit').onclick = zoomFit;
 $('#zoom-slider').oninput = (e) => applyZoom(Number(e.target.value) / 100);
 svg.addEventListener('wheel', (e) => {
   if (!e.ctrlKey) return;
@@ -614,6 +674,12 @@ async function refreshCircuits() {
     $('#circuit-select').innerHTML = (r.circuits || []).map(c => `<option>${c}</option>`).join('');
   } catch { /* offline */ }
 }
+
+// track loads through the command channel: fit the view to a newly loaded circuit
+window.addEventListener('vl-action', (ev) => {
+  const { tool, result } = ev.detail;
+  if (tool === 'load_circuit' && result.ok) ui.pendingFit = result.loaded || true;
+});
 
 // ---------- boot ----------
 initTheme();

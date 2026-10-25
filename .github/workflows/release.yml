@@ -1,0 +1,115 @@
+name: Release
+
+# Builds installable binaries for Windows, macOS and Linux with electron-builder
+# and publishes them to a GitHub Release. Runs on version tags (v1.2.3) or
+# manually (Actions → Release → Run workflow).
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Run test suite
+        run: node --test
+      - name: MCP end-to-end
+        run: node test/mcp.e2e.mjs
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: --win
+          - os: macos-latest
+            args: --mac --arm64 --x64
+          - os: ubuntu-latest
+            args: --linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build binaries
+        run: npx electron-builder ${{ matrix.args }} --publish never
+        env:
+          # skip macOS code signing — unsigned open-source builds
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: voltlab-${{ runner.os }}
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.zip
+            dist/*.blockmap
+          if-no-files-found: error
+          retention-days: 5
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten artifacts
+        run: |
+          mkdir -p release
+          find artifacts -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.zip' \) -exec cp {} release/ \;
+          ls -la release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: release/*
+          body: |
+            ## VoltLab ${{ github.ref_name }}
+
+            Installable builds for **Windows**, **macOS** and **Linux**.
+
+            | Platform | File | Notes |
+            |---|---|---|
+            | Windows | `VoltLab-Setup-*.exe` | NSIS installer (per-user) |
+            | Windows | `VoltLab-Portable-*.exe` | single-file portable, no install |
+            | macOS (Apple Silicon) | `VoltLab-*-arm64.dmg` | unsigned — right-click → Open on first launch |
+            | macOS (Intel) | `VoltLab-*-x64.dmg` | unsigned — right-click → Open on first launch |
+            | Linux | `VoltLab-*-x64.AppImage` | `chmod +x` then run |
+            | Linux | `VoltLab-*-x64.deb` | Debian / Ubuntu |
+
+            Prefer the browser? The simulator also runs at
+            [the GitHub Pages demo](https://touhidsiddiqueeraj-bit.github.io/VoltLab/) —
+            or `npm install && npm start` from source.

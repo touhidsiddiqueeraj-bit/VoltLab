@@ -4,19 +4,74 @@ All notable changes to VoltLab are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project adheres to
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.1.0] — 2026-10-25
 
 ### Fixed
 
-- **Motor direction was invisible.** The engine treated motor speed as a plain magnitude
-  (0..1), so the rotor animation could only ever spin one way — a reversing starter
-  swapped phases electrically but the motor never appeared to slow down, stop, or turn
-  the opposite way. The engine now derives rotation direction from the phase sequence
-  across the motor's U-V-W terminals (`state.dir`: +1 forward, −1 reverse, 0 off) and
-  keeps `state.speed` signed. Applying the opposite sequence to a spinning rotor plugs
-  it: counter-torque brakes through zero at ~2× load current, then it spins up reversed.
-  The rotor animation and inspector render the signed speed/direction, and the event log
-  records `REVERSED — phase order Lx-Ly-Lz` on a direction change.
+- **Elevator hoist motors never reversed.** Both example elevators wired their
+  "down" contactor straight through (L1→L1, L2→L2, L3→L3), so a down call spun
+  the hoist motor in the *same* direction as an up call. The down contactors now
+  swap L2/L3 (KM2 in `elevator-2floor`, KM_dn in `elevator-10floor`), matching
+  the reversing starter: up runs forward, down runs reversed, verified by new
+  engine tests asserting `state.dir === ±1`.
+- **10-floor elevator direction contactors were decorative.** KM_up/KM_dn were
+  tapped on the line side but their load terminals (T1/T2/T3) fed nothing — the
+  motor was wired straight from KM_run and always spun one way, with the
+  selectors only moving dead symbols. The power path is now
+  X1–Q1–F1–KM_run–{KM_up | KM_dn}–KK1–M1, and both elevators gained a proper NC
+  aux cross-interlock (each direction coil fed through the other contactor's
+  21–22), so both can never energize together.
+- **Solver now models sequential coil pickup.** Coils were evaluated against a
+  frozen per-tick netlist, so two cross-interlocked contactors that saw voltage
+  in the same tick would *both* energize (and oscillate) — real contactors
+  can't, because whichever closes first opens the other's NC path. The engine
+  now rebuilds the netlist mid-tick whenever a coil changes state, and later
+  devices in the same tick see the updated circuit.
+- **Drag-to-move never persisted.** The `moved` flag was set in an unreachable
+  code branch, so `move_component` was never called — and 10 Hz SSE state
+  snapshots snapped the component back mid-drag. Drags now track movement from
+  a threshold, own the component position while active, and commit on release.
+- **Clicks between a symbol's strokes fell through to the background.** The
+  symbols are line art with large unpainted interiors, so pointer events
+  between strokes hit the grid rect instead of the component. Every symbol now
+  carries a transparent hit-rect over its full bounding box (pointer-events:
+  all), making select/drag/hover reliable over the whole body.
+
+### Added
+
+- **A real logo.** A designed app icon (bolt over circuit traces on a dark
+  rounded badge) replacing the bare emoji, shipped as `build/icon.svg`,
+  `icon.png` (1024), `icon.ico` (7 sizes) and `icon.icns` (11 entries), used by
+  the installer, window/taskbar, favicon, toolbar and the Pages landing page.
+- **Release CI/CD.** `.github/workflows/release.yml` builds signed-off desktop
+  binaries on tag push (or manual dispatch) with electron-builder — Windows NSIS
+  installer + portable exe, macOS dmg for x64 + arm64, Linux AppImage + deb —
+  and attaches them to a draft GitHub Release. `package.json` moved from
+  electron-packager to electron-builder (`npm run dist`).
+- **Component filter in the palette** — type-to-filter (by name or type), Esc
+  clears.
+- **Inspector circuit overview** — with nothing selected the inspector now
+  shows live circuit stats (components, wires, sim time, motors running,
+  active faults) instead of dead space.
+- **Auto-fit on load** — loading a circuit fits it to the viewport (the
+  10-floor elevator is finally visible in full on first load).
+- **Empty-canvas welcome** — a centered logo + getting-started hint when the
+  canvas is cleared.
+- **Live counts in the status bar** (`13 comps · 31 wires`), symbol hover
+  highlighting, terminal hover grow, themed slim scrollbars.
+- **APK viability study** — `docs/apk.md`: the engine already runs fully
+  client-side (the Pages demo proves it), so a demo APK is ~half a day via
+  Capacitor and the full editor needs one client-side transport bridge.
+
+### Changed
+
+- Regenerated the 10-floor elevator with the corrected power-path layout
+  (KK1 and M1 moved after the direction contactors, CAM1 repositioned; also
+  removed a dead `CAM1.GC` wire). 46 components, 174 wires.
+
+- **Signed speed / direction rendering** (motor `state.dir`: +1 forward, −1 reverse,
+  0 off; plugging through zero on a phase swap; `REVERSED` events in the log) — the
+  foundation the elevator reversal fixes build on.
 
 ## [1.0.0] — 2026-10-07
 
